@@ -1,1 +1,1 @@
-# gpt-prompt-editor
+# GPT Prompt Editor
