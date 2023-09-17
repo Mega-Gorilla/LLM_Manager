@@ -2,10 +2,12 @@
 import tiktoken
 import openai
 import asyncio
-import time,sys,json,os
+import time,sys,os
 from rich import print
-from rich.console import Console
-from module.rich_desgin import error
+try:
+    from module.rich_desgin import error
+except ImportError:
+    from rich_desgin import error
 
 class GPT_request:
     def talknizer(self,texts):
