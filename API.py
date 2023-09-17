@@ -3,7 +3,8 @@ from module.GPT_request import GPT_request
 from module.rich_desgin import error
 from rich import print
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Union,Any
 import os,json,shutil,re
 import openai
 import asyncio
@@ -15,14 +16,35 @@ app = FastAPI()
 chank_list = []
 result_list = []
 
+class Settings(BaseModel):
+    model: str
+    temperature: float
+    top_p: float
+    max_tokens: int
+    presence_penalty: float
+    frequency_penalty: float
+    #logit_bias: Optional[Dict[int, Any]] = None  # Noneかfloatの辞書
+
+#item class
+class Prompts(BaseModel):
+    title: str
+    prompt_text: Optional[str] = Field(None, alias="promptText")
+    setting: Settings
+
+class Test(BaseModel):
+    title: str
+    prompt_text: Optional[str] = None
+
 #Get Job Status
-@app.get("/jobs/{job_name}")
-async def read_job_status(job_name: str):
-    return {job_name: job_manager.get_status(job_name)}
-#Get job list
-@app.get("/job_list/")
-async def read_job_list():
-    return job_manager.get_job_list()
+@app.post("/prompts/")
+async def add_new_prompt(prompt: Prompts):
+    await Create_or_add_json_data(prompt.title,prompt.prompt_text,prompt.setting)
+
+#Get Job Status
+@app.post("/tests/")
+async def Test_item(test: Test):
+    print(test.title)
+    print(test.prompt_text)
 
 # 
 def get_file_list():
@@ -35,11 +57,10 @@ async def Create_or_add_json_data(title,prompt_text=None,settings=None,history=N
     json_file_list = get_file_list()
     json_file_name = title + ".json"
     json_file_path = os.path.join(prompt_folder_path,json_file_name)
-    
-    if json_file_list not in json_file_name:
+    if json_file_name not in json_file_list:
         #jsonファイルが存在しない場合新規作成する。
         tempfilepath=os.path.join(prompt_folder_path,"template.json")
-        if os.path.exists(tempfilepath):
+        if not os.path.exists(tempfilepath):
             error("template.json is Not Found.","[template.json] file not found in the [data] folder.")
             exit(1)
         shutil.copy(tempfilepath,json_file_path)
@@ -49,6 +70,7 @@ async def Create_or_add_json_data(title,prompt_text=None,settings=None,history=N
         json_data = json.load(json_file)
 
     #データの書き込み
+    json_data['title']=title
     if prompt_text is not None:
         json_data['text']=prompt_text
         #variables 設定
@@ -59,7 +81,8 @@ async def Create_or_add_json_data(title,prompt_text=None,settings=None,history=N
         json_data['variables'] = placeholder_dict
 
     if settings is not None:
-        for key, value in settings.items():
+        settings_dict = settings.dict()
+        for key, value in settings_dict.items():
             json_data['setting'][key]= value
     
     if history is not None:
@@ -67,30 +90,6 @@ async def Create_or_add_json_data(title,prompt_text=None,settings=None,history=N
     
     with open(json_file_path, "w", encoding='utf-8') as json_file:
         json.dump(json_data, json_file, indent=4)
-
-#新しいasyncioタスクを作成するプロセス
-async def create_tasks(task_queue):
-    #新しいタスクを作成
-    if task_queue.qsize()!=0:
-        tasks= await task_queue.get()
-        if asyncio.iscoroutine(tasks[1]):
-            asyncio.create_task(tasks[1])
-        else:
-            for task in tasks:
-                asyncio.create_task(task[1])
-
-async def Create_StreamGPT_task(task_queue,result_queue,producer_id,openai_key,prompt,temp=1,tokens_max=2000,model_name='gpt-4',max_retries=3,debug=False):
-    gpt_instance = GPT_request()
-    GPT_stream = gpt_instance.GPT_Stream(result_queue, 
-                                        producer_id, 
-                                        openai_key, 
-                                        prompt,
-                                        temp,
-                                        tokens_max,
-                                        model_name,
-                                        max_retries,
-                                        debug)
-    await task_queue.put(["GPT_stream",GPT_stream])
 
 # result_queueを監視し、新しい関数が入力されたら処理するプロセス
 async def handle_results(result_queue,task_queue):
@@ -104,19 +103,15 @@ async def handle_results(result_queue,task_queue):
 
 
 async def main():
-    task_queue = asyncio.Queue(maxsize=10)
-    result_queue = asyncio.Queue(maxsize=100)
-
-    speech_task = None
-
-    # Start a task to handle results
-    asyncio.create_task(handle_results(result_queue,task_queue))
-
-    while True:
-        
-        await create_tasks(task_queue)
-            
-        await asyncio.sleep(0.5)
+    setting= {
+        "model": "testmodel",
+        "temperature": 0,
+        "top_p": 0,
+        "max_tokens": 0,
+        "presence_penalty": 0,
+        "frequency_penalty": 0
+    }
+    await Create_or_add_json_data("test_title","tsetPrompt",setting)
 
 if __name__ == "__main__":
     speech_key = os.getenv("AZURE_API_KEY")
