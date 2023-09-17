@@ -1,6 +1,6 @@
-{"title":"Prompt Test",
-"text":"test {valueA}",
-"seting":{
+{"title":"Template",
+"text":"This is template.",
+"setting":{
     "model":"gpt-4",
     "temperature":1,
     "top_p":1,
@@ -9,8 +9,6 @@
     "frequency_penalty":0,
     "logit_bias":null},
 "variables":{
-    "valueA":"Data"
 },
-"Histroy":{
-}
+"history":[]
 }
