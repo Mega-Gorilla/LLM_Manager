@@ -2,9 +2,9 @@
 from module.GPT_request import GPT_request
 from module.rich_desgin import error
 from rich import print
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body,HTTPException
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, List,Any
+from typing import Optional, Dict, List,Any,Union
 import os,json,shutil,re
 import asyncio
 import time
@@ -14,23 +14,19 @@ prompt_folder_path = "data"
 app = FastAPI()
 
 class Settings(BaseModel):
-    model: str
-    temperature: float
-    top_p: float
-    max_tokens: int
-    presence_penalty: float
-    frequency_penalty: float
+    model: str = Field(default="gpt-3.5-turbo")
+    temperature: int = Field(default=1)
+    top_p: int = Field(default=1)
+    max_tokens: int = Field(default=500)
+    presence_penalty: int = Field(default=0)
+    frequency_penalty: int = Field(default=0)
     #logit_bias: Optional[Dict[int, Any]] = None  # Noneかfloatの辞書
-
-class TextItem(BaseModel):
-    system: Optional[str] = None
-    user: Optional[str] = None
 
 #item class
 class Prompts(BaseModel):
-    title: str
-    description: str
-    text: List[TextItem]
+    title: str = Field(default="Prompt Name")
+    description: str= Field(default="Prompt Description")
+    texts: List[Dict[str, str]] = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}.","user": "Hello!"})
     setting: Settings
 
 class Test(BaseModel):
@@ -38,7 +34,7 @@ class Test(BaseModel):
     prompt_text: Optional[str] = None
 
 class variables_dict(BaseModel):
-    variables: dict = Field(default={})
+    variables: dict = Field(default={},example={"Data":"String"})
 
 class global_values:
     prompt_list = []
@@ -46,7 +42,15 @@ class global_values:
 
 @app.post("/prompts-post/new_prompt", tags=["Prompts"])
 async def add_new_prompt(prompt: Prompts):
-    await Create_or_add_json_data(prompt.title,prompt.description,prompt.text,prompt.setting)
+    result = await get_prompts_list()
+    global_values.prompt_list = result
+    title_list = [d["title"] for d in result]
+    if prompt.title in title_list:
+        raise HTTPException(status_code=400, detail="Title already exists.")
+    
+    print(f"{prompt.title}\n{prompt.description}\n{prompt.texts}\n{prompt.setting}")
+    
+    await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting)
 
 @app.get("/prompts-get/list", tags=["Prompts"])
 async def get_prompt_list():
@@ -67,7 +71,7 @@ async def get_history(prompt_name: str):
     return result
 
 @app.post("/requst/openai/{prompt_name}", tags=["OpenAI"])
-async def OpenAI_request(prompt_name: str, item: variables_dict):
+async def OpenAI_request(prompt_name: str, item: variables_dict = None):
     responce = await GPT_request_API(prompt_name, item.variables)
     return responce
 
@@ -131,9 +135,13 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
         json_data['text']=prompt_text
         #variables 設定
         placeholder_dict = {}
-        placeholders = re.findall(r'{(.*?)}', prompt_text)
-        for placeholder in placeholders:
-            placeholder_dict[placeholder] = ""
+        
+        for key, value in prompt_text.items():
+            if isinstance(value, str):  # この例ではstr型だけを対象としています
+                placeholders = re.findall(r'{(.*?)}', value)
+                for placeholder in placeholders:
+                    placeholder_dict[placeholder] = ""
+        
         json_data['variables'] = placeholder_dict
 
     if settings is not None:
@@ -149,6 +157,7 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
 
 #GPTに問い合わせ実施
 async def GPT_request_API(name,values):
+
     prompt_list = global_values.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
     if len(filtered_list) == 0:
@@ -159,10 +168,21 @@ async def GPT_request_API(name,values):
         return None
     filtered_list = filtered_list[0]
 
-    text = filtered_list['text']
-    for item in text:
-        for key, value in item.items():
-            item[key] = value.format(**values)
+    text = []
+    for key, value in filtered_list['text'].items():
+        if isinstance(value, str):
+            # 文字列内のプレースホルダー（{xxx}）を見つける
+            placeholders = re.findall(r'{(.*?)}', value)
+            
+            # values がすべてのプレースホルダーに対応するキーを持っているか確認
+            if all(placeholder in values for placeholder in placeholders):
+                if values:
+                    value = value.format(**values)
+            else:
+                print(f"Warning: Missing keys for placeholders in '{value}'")
+
+            text.append({key: value})
+    print(f"prompt= {text}")
     response = await GPT_request().GPT_request(filtered_list['title'],
                               openai_key,
                               text,
