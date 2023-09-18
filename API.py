@@ -2,10 +2,10 @@
 from module.GPT_request import GPT_request
 from module.rich_desgin import error
 from rich import print
-from fastapi import FastAPI, Body,HTTPException
+from fastapi import FastAPI, Body,HTTPException,Query
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List,Any,Union
-from datetime import datetime
+from datetime import datetime,date
 import os, json, shutil, re, csv
 import asyncio
 import time
@@ -56,7 +56,6 @@ async def add_new_prompt(prompt: Prompts):
 async def get_prompt_list():
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
-    
     print(result)
     return result
 
@@ -79,6 +78,30 @@ async def get_history(prompt_name: str):
     result = await get_history(prompt_name)
     print(result)
     return result
+
+@app.get("/cost-get/day/", tags=["Cost"])
+async def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
+    # 指定された日付のtotal_tokensの合計値
+    model_summary = {}
+
+    with open("data/cost.csv", "r", encoding="utf-8") as file:
+        csv_reader = csv.DictReader(file)
+        
+        for row in csv_reader:
+            timestamp = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00"))
+            timestamp_date = timestamp.strftime("%Y-%m-%d")
+            model_name = row["model_name"]
+
+            # 指定された日付と一致するレコードの場合、各トークンを加算
+            if timestamp_date == str(day):
+                if model_name not in model_summary:
+                    model_summary[model_name] = {"prompt_tokens_sum": 0, "completion_tokens_sum": 0}
+
+                model_summary[model_name]["prompt_tokens_sum"] += int(row["prompt_tokens"])
+                model_summary[model_name]["completion_tokens_sum"] += int(row["completion_tokens"])
+
+    print(f"{day}: {model_summary}")
+    return {"day": str(day), "model_summary": model_summary}
 
 @app.post("/requst/openai-post/{prompt_name}", tags=["OpenAI"])
 async def OpenAI_request(prompt_name: str, value: variables_dict = None, stream: bool=False):
@@ -111,12 +134,12 @@ async def Test_item(test: Test):
     print(test.prompt_text)
 
 # save csv data
-async def log_gpt_query_to_csv(prompt, prompt_tokens, completion_tokens, total_tokens):
+async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, total_tokens):
     # 現在のUTCタイムスタンプを取得
     timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
     # データをリストとして格納
-    data_row = [timestamp, prompt, prompt_tokens, completion_tokens, total_tokens]
+    data_row = [timestamp,model, prompt, prompt_tokens, completion_tokens, total_tokens]
     
     # 'data' ディレクトリが存在しない場合は作成
     if not os.path.exists('data'):
@@ -124,7 +147,7 @@ async def log_gpt_query_to_csv(prompt, prompt_tokens, completion_tokens, total_t
 
     # CSVファイルが存在しない場合は、新規作成してヘッダーを書き出す
     if not os.path.exists('data/cost.csv'):
-        header = ['timestamp', 'prompt', 'prompt_tokens', 'completion_tokens', 'total_tokens']
+        header = ['timestamp','model_name', 'prompt', 'prompt_tokens', 'completion_tokens', 'total_tokens']
         with open('data/cost.csv', mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(header)
@@ -262,7 +285,7 @@ async def GPT_request_API(name,user_prompts={},values={},queue=None):
     
     #レスポンスをロギング
     await Create_or_add_json_data(name,history=response)
-    await log_gpt_query_to_csv(name,response["usage"]['prompt_tokens'],response["usage"]['completion_tokens'],response["usage"]['total_tokens'])
+    await log_gpt_query_to_csv(name,filtered_list['setting']['model'],response["usage"]['prompt_tokens'],response["usage"]['completion_tokens'],response["usage"]['total_tokens'])
 
     return response["choices"][0]["message"]["content"]
 
