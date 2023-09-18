@@ -34,7 +34,7 @@ class Test(BaseModel):
     prompt_text: Optional[str] = None
 
 class variables_dict(BaseModel):
-    variables: dict = Field(default={},example={"Data":"String"})
+    variables: dict = Field(default={})
 
 class global_values:
     prompt_list = []
@@ -77,7 +77,16 @@ async def get_history(prompt_name: str):
 
 @app.post("/requst/openai/{prompt_name}", tags=["OpenAI"])
 async def OpenAI_request(prompt_name: str, item: variables_dict = None):
+    if prompt_name == "template":
+        raise HTTPException(status_code=400, detail="Editing Template.json is prohibited")
     responce = await GPT_request_API(prompt_name, item.variables)
+    return responce
+
+@app.post("/requst/openai/stream/{prompt_name}", tags=["OpenAI"])
+async def OpenAI_request(prompt_name: str, item: variables_dict = None):
+    if prompt_name == "template":
+        raise HTTPException(status_code=400, detail="Editing Template.json is prohibited")
+    responce = await GPT_request_API(prompt_name, item.variables,global_values.stream_queue)
     return responce
 
 #Test
@@ -158,10 +167,10 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
         json_data['history'].append(history)
     
     with open(json_file_path, "w", encoding='utf-8') as json_file:
-        json.dump(json_data, json_file, indent=4)
+        json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
 #GPTに問い合わせ実施
-async def GPT_request_API(name,values):
+async def GPT_request_API(name,values,queue=None):
 
     prompt_list = global_values.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
@@ -187,17 +196,30 @@ async def GPT_request_API(name,values):
                 print(f"Warning: Missing keys for placeholders in '{value}'")
 
             text.append({key: value})
-    print(f"prompt= {text}")
-    response = await GPT_request().GPT_request(filtered_list['title'],
-                              openai_key,
-                              text,
-                              filtered_list['setting']['temperature'],
-                              filtered_list['setting']['max_tokens'],
-                              filtered_list['setting']['model'])
-    response['variables']= values
-    response['prompt']= text
-    await Create_or_add_json_data(name,history=response)
-    return response["choices"][0]["message"]["content"]
+    if queue is None:
+        response = await GPT_request().GPT_request(filtered_list['title'],
+                                openai_key,
+                                text,
+                                filtered_list['setting']['temperature'],
+                                filtered_list['setting']['max_tokens'],
+                                filtered_list['setting']['model'])
+        response['variables']= values
+        response['prompt']= text
+        await Create_or_add_json_data(name,history=response)
+        return response["choices"][0]["message"]["content"]
+    else:
+        timestamp=filtered_list['title']+" - "+str(time.time())
+        response = await GPT_request().GPT_request_stream(queue,
+                                                timestamp,
+                                                openai_key,
+                                                text,
+                                                filtered_list['setting']['temperature'],
+                                                filtered_list['setting']['max_tokens'],
+                                                filtered_list['setting']['model'])
+        response['variables']= values
+        response['prompt']= text
+        await Create_or_add_json_data(name,history=response)
+        return response["choices"][0]["message"]["content"]
 
 async def main():
     #global_values.prompt_list = await get_prompts_list()
