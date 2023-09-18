@@ -5,7 +5,8 @@ from rich import print
 from fastapi import FastAPI, Body,HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List,Any,Union
-import os,json,shutil,re
+from datetime import datetime
+import os, json, shutil, re, csv
 import asyncio
 import time
 
@@ -109,6 +110,30 @@ async def Test_item(test: Test):
     print(test.title)
     print(test.prompt_text)
 
+# save csv data
+async def log_gpt_query_to_csv(prompt, prompt_tokens, completion_tokens, total_tokens):
+    # 現在のUTCタイムスタンプを取得
+    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    
+    # データをリストとして格納
+    data_row = [timestamp, prompt, prompt_tokens, completion_tokens, total_tokens]
+    
+    # 'data' ディレクトリが存在しない場合は作成
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
+    # CSVファイルが存在しない場合は、新規作成してヘッダーを書き出す
+    if not os.path.exists('data/cost.csv'):
+        header = ['timestamp', 'prompt', 'prompt_tokens', 'completion_tokens', 'total_tokens']
+        with open('data/cost.csv', mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+
+    # ファイルを開いてデータを最終行に追記
+    with open('data/cost.csv', mode='a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(data_row)
+
 # jsonデータをリストで取得する
 def get_file_list():
     all_files = os.listdir("data")
@@ -185,12 +210,12 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
 
 #GPTに問い合わせ実施
 async def GPT_request_API(name,user_prompts={},values={},queue=None):
-
-    prompt_list = global_values.prompt_list
+    processtime=time.time()
+    prompt_list = GlobalValues.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
     if len(filtered_list) == 0:
         prompt_list=await get_prompts_list()
-        global_values.prompt_list = prompt_list
+        GlobalValues.prompt_list = prompt_list
         filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
     if len(filtered_list) == 0:
         raise HTTPException(status_code=404, detail="The specified prompt could not be found.")
@@ -221,10 +246,6 @@ async def GPT_request_API(name,user_prompts={},values={},queue=None):
                                 filtered_list['setting']['temperature'],
                                 filtered_list['setting']['max_tokens'],
                                 filtered_list['setting']['model'])
-        response['variables']= values
-        response['prompt']= text
-        await Create_or_add_json_data(name,history=response)
-        return response["choices"][0]["message"]["content"]
     else:
         timestamp=filtered_list['title']+" - "+str(time.time())
         response = await GPT_request().GPT_request_stream(queue,
@@ -234,10 +255,16 @@ async def GPT_request_API(name,user_prompts={},values={},queue=None):
                                                 filtered_list['setting']['temperature'],
                                                 filtered_list['setting']['max_tokens'],
                                                 filtered_list['setting']['model'])
-        response['variables']= values
-        response['prompt']= text
-        await Create_or_add_json_data(name,history=response)
-        return response["choices"][0]["message"]["content"]
+    
+    #データ追加
+    response['variables']= values
+    response['prompt']= text
+    
+    #レスポンスをロギング
+    await Create_or_add_json_data(name,history=response)
+    await log_gpt_query_to_csv(name,response["usage"]['prompt_tokens'],response["usage"]['completion_tokens'],response["usage"]['total_tokens'])
+
+    return response["choices"][0]["message"]["content"]
 
 async def main():
     #global_values.prompt_list = await get_prompts_list()
