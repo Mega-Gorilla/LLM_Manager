@@ -30,10 +30,6 @@ class Prompts(BaseModel):
     texts: dict = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}."})
     setting: Settings
 
-class Test(BaseModel):
-    title: str
-    prompt_text: Optional[str] = None
-
 class variables_dict(BaseModel):
     user_assistant_prompt: dict = Field(default={"user": "こんにちわ!みらい"})
     variables: dict = Field(default={})
@@ -126,12 +122,6 @@ async def get_queue():
         return result
     else:
         raise HTTPException(status_code=404, detail="No data available in the stream queue.")
-
-#Test
-@app.post("/tests/")
-async def Test_item(test: Test):
-    print(test.title)
-    print(test.prompt_text)
 
 # save csv data
 async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, total_tokens):
