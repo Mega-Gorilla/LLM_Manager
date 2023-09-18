@@ -65,7 +65,7 @@ class GPT_request:
                     fin_reason = chunk["choices"][0].get("finish_reason")
                     if content is not None or fin_reason != "stop":
                         result_content += content
-                        await queue.put({"id": producer_id, 
+                        await queue.put({"id": producer_id,
                                          "message": content,
                                          "index": chunk["choices"][0].get("index"),
                                          'id':chunk["id"],
@@ -78,19 +78,26 @@ class GPT_request:
                         #token calc
                         prompt_tokens=self.talknizer(''.join([item['content'] for item in Prompts]))
                         completion_tokens=self.talknizer(result_content)
-                        await queue.put({"id": producer_id, 
-                                         "message": result_content,
-                                         "index": chunk["choices"][0].get("index"),
-                                         'id':chunk["id"],
-                                         'object':chunk["object"],
-                                         'created':chunk["created"],
-                                         'model':chunk["model"],
-                                         "finish_reason": fin_reason,
-                                         "prompt_tokens":prompt_tokens,
-                                         "completion_tokens":completion_tokens,
-                                         "total_tokens":prompt_tokens+completion_tokens})
-                        await asyncio.sleep(0.01)
-                break
+                        responce = {
+                                "id": chunk["id"],
+                                "object": chunk["object"],
+                                "created": chunk["created"],
+                                "model": chunk["model"],
+                                "choices": [{
+                                    "index": chunk["choices"][0].get("index"),
+                                    "message": {
+                                    "role": "assistant",
+                                    "content": result_content,
+                                    },
+                                    "finish_reason": fin_reason
+                                }],
+                                "usage": {
+                                    "prompt_tokens": prompt_tokens,
+                                    "completion_tokens": completion_tokens,
+                                    "total_tokens": prompt_tokens+completion_tokens
+                                }
+                        }
+                        return responce
             except Exception as e:
                 title, message, action = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit'))
                 print(e)
