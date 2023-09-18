@@ -26,7 +26,7 @@ class Settings(BaseModel):
 class Prompts(BaseModel):
     title: str = Field(default="Prompt Name")
     description: str= Field(default="Prompt Description")
-    texts: List[Dict[str, str]] = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}.","user": "Hello!"})
+    texts: dict = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}."})
     setting: Settings
 
 class Test(BaseModel):
@@ -34,60 +34,74 @@ class Test(BaseModel):
     prompt_text: Optional[str] = None
 
 class variables_dict(BaseModel):
+    user_assistant_prompt: dict = Field(default={"user": "こんにちわ!みらい"})
     variables: dict = Field(default={})
 
-class global_values:
+class GlobalValues:
     prompt_list = []
     stream_queue= asyncio.Queue()
 
 @app.post("/prompts-post/new_prompt", tags=["Prompts"])
 async def add_new_prompt(prompt: Prompts):
     result = await get_prompts_list()
-    global_values.prompt_list = result
+    GlobalValues.prompt_list = result
     title_list = [d["title"] for d in result]
     if prompt.title in title_list:
         raise HTTPException(status_code=400, detail="Title already exists.")
-    
-    print(f"{prompt.title}\n{prompt.description}\n{prompt.texts}\n{prompt.setting}")
     
     await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting)
 
 @app.get("/prompts-get/list", tags=["Prompts"])
 async def get_prompt_list():
     result = await get_prompts_list()
-    global_values.prompt_list = result
+    GlobalValues.prompt_list = result
+    
+    print(result)
     return result
 
 @app.get("/prompts-get/names", tags=["Prompts"])
 async def get_prompt_name():
     result = await get_prompts_list()
-    global_values.prompt_list = result
+    GlobalValues.prompt_list = result
     new_dict = {}
     for item in result:
         title = item.get('title')
         description = item.get('description')
         if title and description:  # titleとdescriptionが存在する場合のみ追加
             new_dict[title] = description
+    
+    print(new_dict)
     return new_dict
 
 @app.get("/prompts-get/history/{prompt_name}", tags=["Prompts"])
 async def get_history(prompt_name: str):
     result = await get_history(prompt_name)
+    print(result)
     return result
 
-@app.post("/requst/openai/{prompt_name}", tags=["OpenAI"])
-async def OpenAI_request(prompt_name: str, item: variables_dict = None):
+@app.post("/requst/openai-post/{prompt_name}", tags=["OpenAI"])
+async def OpenAI_request(prompt_name: str, value: variables_dict = None, stream: bool=False):
     if prompt_name == "template":
         raise HTTPException(status_code=400, detail="Editing Template.json is prohibited")
-    responce = await GPT_request_API(prompt_name, item.variables)
+    
+    if stream:
+        responce = await GPT_request_API(prompt_name, value.user_assistant_prompt,value.variables, GlobalValues.stream_queue)
+    else:
+        responce = await GPT_request_API(prompt_name, value.user_assistant_prompt,value.variables)
+    print(responce)
     return responce
 
-@app.post("/requst/openai/stream/{prompt_name}", tags=["OpenAI"])
-async def OpenAI_request(prompt_name: str, item: variables_dict = None):
-    if prompt_name == "template":
-        raise HTTPException(status_code=400, detail="Editing Template.json is prohibited")
-    responce = await GPT_request_API(prompt_name, item.variables,global_values.stream_queue)
-    return responce
+@app.get("/requst/openai-get/queue", tags=["OpenAI"])
+async def get_queue():
+    if GlobalValues.stream_queue.qsize() != 0:
+        try:
+            result = await GlobalValues.stream_queue.get()
+            print(result)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred while fetching from queue: {str(e)}")
+        return result
+    else:
+        raise HTTPException(status_code=404, detail="No data available in the stream queue.")
 
 #Test
 @app.post("/tests/")
@@ -170,7 +184,7 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
         json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
 #GPTに問い合わせ実施
-async def GPT_request_API(name,values,queue=None):
+async def GPT_request_API(name,user_prompts={},values={},queue=None):
 
     prompt_list = global_values.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
@@ -179,7 +193,7 @@ async def GPT_request_API(name,values,queue=None):
         global_values.prompt_list = prompt_list
         filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
     if len(filtered_list) == 0:
-        return None
+        raise HTTPException(status_code=404, detail="The specified prompt could not be found.")
     filtered_list = filtered_list[0]
 
     text = []
@@ -196,6 +210,10 @@ async def GPT_request_API(name,values,queue=None):
                 print(f"Warning: Missing keys for placeholders in '{value}'")
 
             text.append({key: value})
+    
+    if user_prompts != {}:
+        text.append(user_prompts)
+
     if queue is None:
         response = await GPT_request().GPT_request(filtered_list['title'],
                                 openai_key,
