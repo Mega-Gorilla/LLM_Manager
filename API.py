@@ -62,8 +62,13 @@ async def get_prompt_list():
 async def get_prompt_name():
     result = await get_prompts_list()
     global_values.prompt_list = result
-    title_list = [d["title"] for d in result]
-    return title_list
+    new_dict = {}
+    for item in result:
+        title = item.get('title')
+        description = item.get('description')
+        if title and description:  # titleとdescriptionが存在する場合のみ追加
+            new_dict[title] = description
+    return new_dict
 
 @app.get("/prompts-get/history/{prompt_name}", tags=["Prompts"])
 async def get_history(prompt_name: str):
