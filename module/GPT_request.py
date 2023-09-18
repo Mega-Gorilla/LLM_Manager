@@ -102,7 +102,7 @@ class GPT_request:
                 elif action == 'sleep':
                     await asyncio.sleep(1)
     
-    async def GPT_request(self,queue, producer_id, OpenAI_key,Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],temp=0,tokens_max=2000,model="gpt-4",max_retries=3,debug=False):
+    async def GPT_request(self, producer_id, OpenAI_key,Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],temp=0,tokens_max=2000,model="gpt-4",max_retries=3,debug=False):
         openai.api_key=OpenAI_key
         if debug:
             print(f'Start {producer_id}: {model}')
@@ -130,19 +130,7 @@ class GPT_request:
                 frequency_penalty=0,
                 presence_penalty=0
                 )
-                await queue.put({"id": producer_id, 
-                                    "message": response["choices"][0]["message"]["content"],
-                                    "index": response["choices"][0].get("index"),
-                                    'id':response["id"],
-                                    'object':response["object"],
-                                    'created':response["created"],
-                                    'model':response["model"],
-                                    "finish_reason": response["choices"][0].get("finish_reason"),
-                                    "prompt_tokens":response["usage"].get("prompt_tokens"),
-                                    "completion_tokens":response["usage"].get("completion_tokens"),
-                                    "total_tokens":response["usage"].get("total_tokens")})
-                await asyncio.sleep(0.5)
-                break
+                return response
 
             except Exception as e:
                 title, message, action = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit'))
