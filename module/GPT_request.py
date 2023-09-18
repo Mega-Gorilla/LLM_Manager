@@ -64,7 +64,7 @@ class GPT_request:
                     content = chunk["choices"][0].get("delta", {}).get("content")
                     fin_reason = chunk["choices"][0].get("finish_reason")
                     if content is not None or fin_reason != "stop":
-                        result_content += content
+                        result_content += content or ""
                         await queue.put({"id": producer_id,
                                          "message": content,
                                          "index": chunk["choices"][0].get("index"),
