@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
         # OpenAI問い合わせ実行
         result = request_mirai_example(request_data)
-        print(f"Mirai: {result}")
+        print(f"\nMirai: {result}")
 
         # メモリ保存
         request_data.append({"assistant": result})
