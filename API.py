@@ -38,7 +38,7 @@ class GlobalValues:
     prompt_list = []
     stream_queue= asyncio.Queue()
 
-@app.post("/prompts-post/new_prompt", tags=["Prompts"])
+@app.post("/prompts-post/addNewPrompt", tags=["Prompts"])
 async def add_new_prompt(prompt: Prompts):
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
@@ -48,15 +48,15 @@ async def add_new_prompt(prompt: Prompts):
     
     await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting)
 
-@app.get("/prompts-get/list", tags=["Prompts"])
-async def get_prompt_list():
+@app.get("/prompts-get/getAllPromptsData", tags=["Prompts"])
+async def get_all_prompts_data():
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
     print(result)
     return result
 
-@app.get("/prompts-get/names", tags=["Prompts"])
-async def get_prompt_name():
+@app.get("/prompts-get/getAllPromptsNames", tags=["Prompts"])
+async def get_all_prompts_names():
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
     new_dict = {}
@@ -68,6 +68,13 @@ async def get_prompt_name():
     
     print(new_dict)
     return new_dict
+
+@app.get("/prompts-get/getPromptDataByName", tags=["Prompts"])
+async def get_prompt_data_by_name(prompt_name: str):
+    result = await get_prompts_list(prompt_name)
+    GlobalValues.prompt_list = result
+    print(result)
+    return result
 
 @app.get("/prompts-get/history/{prompt_name}", tags=["Prompts"])
 async def get_history(prompt_name: str):
@@ -148,14 +155,19 @@ async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, t
         writer.writerow(data_row)
 
 # jsonデータをリストで取得する
-def get_file_list():
+def get_file_list(search_query=None):
     all_files = os.listdir("data")
     json_files = [f for f in all_files if f.endswith('.json')]
+    
+    # search_queryが存在する場合、該当するファイル名だけをフィルタします。
+    if search_query:
+        json_files = [f for f in json_files if search_query in f]
+        
     return json_files
 
 #プロンプトリストの取得
-async def get_prompts_list():
-    json_file_list = get_file_list()
+async def get_prompts_list(search_query=None):
+    json_file_list = get_file_list(search_query)
     result = []
 
     for json_file in json_file_list:
