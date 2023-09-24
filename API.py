@@ -272,9 +272,10 @@ async def GPT_request_API(name,user_prompts=None,values={},queue=None):
                                 filtered_list['setting']['max_tokens'],
                                 filtered_list['setting']['model'])
     else:
-        timestamp=filtered_list['title']+" - "+str(time.time())
+        timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        timestamp_name =name+" - "+ timestamp
         response = await GPT_request().GPT_request_stream(queue,
-                                                timestamp,
+                                                timestamp_name,
                                                 openai_key,
                                                 text,
                                                 filtered_list['setting']['temperature'],
