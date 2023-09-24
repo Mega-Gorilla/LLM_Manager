@@ -31,7 +31,7 @@ class Prompts(BaseModel):
     setting: Settings
 
 class variables_dict(BaseModel):
-    user_assistant_prompt: dict = Field(default={"user": "こんにちわ!みらい"})
+    user_assistant_prompt: List[Dict[str, str]] = Field(default=[{"user": "こんにちわ!みらい"}])
     variables: dict = Field(default={})
 
 class GlobalValues:
@@ -234,8 +234,8 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
         json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
 #GPTに問い合わせ実施
-async def GPT_request_API(name,user_prompts={},values={},queue=None):
-    processtime=time.time()
+async def GPT_request_API(name,user_prompts=None,values={},queue=None):
+    #processtime=time.time()
     prompt_list = GlobalValues.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
     if len(filtered_list) == 0:
@@ -261,8 +261,8 @@ async def GPT_request_API(name,user_prompts={},values={},queue=None):
 
             text.append({key: value})
     
-    if user_prompts != {}:
-        text.append(user_prompts)
+    if user_prompts != None:
+        text=user_prompts
 
     if queue is None:
         response = await GPT_request().GPT_request(filtered_list['title'],
