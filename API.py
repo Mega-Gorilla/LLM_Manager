@@ -298,7 +298,4 @@ async def main():
     print({(time.time())-process_time})
 
 if __name__ == "__main__":
-    speech_key = os.getenv("AZURE_API_KEY")
-    speech_region = "japaneast"
-
     asyncio.run(main())
