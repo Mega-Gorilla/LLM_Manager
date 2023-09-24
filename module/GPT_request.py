@@ -45,7 +45,7 @@ class GPT_request:
             Prompts.append(transformed_dict)
 
         retry_count = 0
-
+        
         while retry_count < max_retries:
             try:
                 result_content=""
@@ -65,7 +65,7 @@ class GPT_request:
                     fin_reason = chunk["choices"][0].get("finish_reason")
                     if content is not None or fin_reason != "stop":
                         result_content += content or ""
-                        await queue.put({"id": producer_id,
+                        await queue.put({"producer_id": producer_id,
                                          "message": content,
                                          "index": chunk["choices"][0].get("index"),
                                          'id':chunk["id"],
