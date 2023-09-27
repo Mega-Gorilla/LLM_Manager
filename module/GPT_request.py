@@ -75,6 +75,16 @@ class GPT_request:
                                          "finish_reason": fin_reason})
                         await asyncio.sleep(0.01)
                     else:
+                        #Last queue put
+                        await queue.put({"producer_id": producer_id,
+                                         "message": content,
+                                         "index": chunk["choices"][0].get("index"),
+                                         'id':chunk["id"],
+                                         'object':chunk["object"],
+                                         'created':chunk["created"],
+                                         'model':chunk["model"],
+                                         "finish_reason": fin_reason})
+
                         #token calc
                         prompt_tokens=self.talknizer(''.join([item['content'] for item in Prompts]))
                         completion_tokens=self.talknizer(result_content)
