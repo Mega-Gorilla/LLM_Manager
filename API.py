@@ -308,11 +308,6 @@ async def GPT_request_API(name,user_prompts=[],values={},queue=None):
 
     return response["choices"][0]["message"]["content"]
 
-async def main():
-    #global_values.prompt_list = await get_prompts_list()
-    process_time=time.time()
-    await GPT_request_API("template",{"things":"weather"})
-    print({(time.time())-process_time})
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
