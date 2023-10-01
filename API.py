@@ -2,7 +2,8 @@
 from module.GPT_request import GPT_request
 from module.rich_desgin import error
 from rich import print
-from fastapi import FastAPI, Body,HTTPException,Query
+from fastapi import FastAPI, Request,HTTPException,Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List,Any,Union
 from datetime import datetime,date
@@ -37,6 +38,14 @@ class variables_dict(BaseModel):
 class GlobalValues:
     prompt_list = []
     stream_queue= asyncio.Queue()
+    custom_value: List[Dict] = []
+    
+@app.exception_handler(404)
+async def not_found_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "The resource you are looking for was not found."},
+    )
 
 @app.post("/prompts-post/addNewPrompt", tags=["Prompts"])
 async def add_new_prompt(prompt: Prompts):
@@ -129,6 +138,15 @@ async def get_queue():
         return result
     else:
         raise HTTPException(status_code=404, detail="No data available in the stream queue.")
+
+@app.post("/custom/add",tags=["Custom"])
+async def add_Dict(item: Dict):
+    GlobalValues.custom_value = item
+    return item
+
+@app.get("/custom/get_data/",tags=["Custom"])
+async def get_Dict():
+    return GlobalValues.custom_value
 
 # save csv data
 async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, total_tokens):
@@ -234,8 +252,8 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
         json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
 #GPTに問い合わせ実施
-async def GPT_request_API(name,user_prompts=None,values={},queue=None):
-    #processtime=time.time()
+async def GPT_request_API(name,user_prompts=[],values={},queue=None):
+    #jsonデータの検索
     prompt_list = GlobalValues.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
     if len(filtered_list) == 0:
@@ -260,10 +278,8 @@ async def GPT_request_API(name,user_prompts=None,values={},queue=None):
                 print(f"Warning: Missing keys for placeholders in '{value}'")
 
             text.append({key: value})
-    
-    if user_prompts != None:
-        text=user_prompts
-
+    if user_prompts != []:
+        text+=user_prompts
     if queue is None:
         response = await GPT_request().GPT_request(filtered_list['title'],
                                 openai_key,
