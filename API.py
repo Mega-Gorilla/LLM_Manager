@@ -39,6 +39,7 @@ class GlobalValues:
     prompt_list = []
     stream_queue= asyncio.Queue()
     custom_value: List[Dict] = []
+    custom_value_unity: List[Dict] = []
     
 @app.exception_handler(404)
 async def not_found_exception_handler(request: Request, exc: HTTPException):
@@ -139,14 +140,23 @@ async def get_queue():
     else:
         raise HTTPException(status_code=404, detail="No data available in the stream queue.")
 
-@app.post("/custom/add",tags=["Custom"])
+@app.post("/custom/add/A",tags=["Custom"])
 async def add_Dict(item: Dict):
     GlobalValues.custom_value = item
     return item
 
-@app.get("/custom/get_data/",tags=["Custom"])
+@app.get("/custom/get_data/A",tags=["Custom"])
 async def get_Dict():
     return GlobalValues.custom_value
+
+@app.post("/custom/add/B",tags=["Custom"])
+async def add_Dict(item: Dict):
+    GlobalValues.custom_value_unity = item
+    return item
+
+@app.get("/custom/get_data/B",tags=["Custom"])
+async def get_Dict():
+    return GlobalValues.custom_value_unity
 
 # save csv data
 async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, total_tokens):
