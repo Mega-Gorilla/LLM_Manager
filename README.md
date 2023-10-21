@@ -3,12 +3,12 @@
 # Overview
 
 # 🛠 Installation
-#### 1.Bulid from source
+## 1.Bulid from source
     git clone https://github.com/Mega-Gorilla/gpt-prompt-editor.git
     cd gpt-prompt-editor
     pip install -r requirements.txt
 
-#### 2.Setting up the OpenAI Key
+## 2.Setting up the OpenAI Key
 
 To integrate OpenAI services into your application, follow these steps to set up your API key:
 
