@@ -48,7 +48,7 @@ async def not_found_exception_handler(request: Request, exc: HTTPException):
         content={"detail": "The resource you are looking for was not found."},
     )
 
-@app.post("/prompts-post/addNewPrompt", tags=["Prompts"])
+@app.post("/prompts-post/add_new_prompt", tags=["Prompts"])
 async def add_new_prompt(prompt: Prompts):
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
@@ -58,14 +58,15 @@ async def add_new_prompt(prompt: Prompts):
     
     await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting)
 
-@app.get("/prompts-get/getAllPromptsData", tags=["Prompts"])
+@app.get("/prompts-get/get_prompt_metadata", tags=["Prompts"])
 async def get_all_prompts_data():
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
+    print("PromptsData:")
     print(result)
     return result
 
-@app.get("/prompts-get/getAllPromptsNames", tags=["Prompts"])
+@app.get("/prompts-get/get_prompt_details", tags=["Prompts"])
 async def get_all_prompts_names():
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
@@ -75,11 +76,11 @@ async def get_all_prompts_names():
         description = item.get('description')
         if title and description:  # titleとdescriptionが存在する場合のみ追加
             new_dict[title] = description
-    
+    print("{Name: Description}:")
     print(new_dict)
     return new_dict
 
-@app.get("/prompts-get/getPromptDataByName", tags=["Prompts"])
+@app.get("/prompts-get/lookup_prompt_by_name", tags=["Prompts"])
 async def get_prompt_data_by_name(prompt_name: str):
     result = await get_prompts_list(prompt_name)
     GlobalValues.prompt_list = result
@@ -119,7 +120,7 @@ async def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d
 @app.post("/requst/openai-post/{prompt_name}", tags=["OpenAI"])
 async def OpenAI_request(prompt_name: str, value: variables_dict = None, stream: bool=False):
     if prompt_name == "template":
-        raise HTTPException(status_code=400, detail="Editing Template.json is prohibited")
+        raise HTTPException(status_code=400, detail="Editing Template.json is prohibited.\nPlease enter another json file.")
     
     if stream:
         responce = await GPT_request_API(prompt_name, value.user_assistant_prompt,value.variables, GlobalValues.stream_queue)
