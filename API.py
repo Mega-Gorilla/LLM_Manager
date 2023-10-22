@@ -17,11 +17,11 @@ app = FastAPI()
 
 class Settings(BaseModel):
     model: str = Field(default="gpt-3.5-turbo")
-    temperature: int = Field(default=1)
-    top_p: int = Field(default=1)
+    temperature: float = Field(default=1.00)
+    top_p: float = Field(default=1)
     max_tokens: int = Field(default=500)
-    presence_penalty: int = Field(default=0)
-    frequency_penalty: int = Field(default=0)
+    presence_penalty: float = Field(default=0.00)
+    frequency_penalty: float = Field(default=0.00)
     #logit_bias: Optional[Dict[int, Any]] = None  # Noneかfloatの辞書
 
 #item class
@@ -48,13 +48,14 @@ async def not_found_exception_handler(request: Request, exc: HTTPException):
         content={"detail": "The resource you are looking for was not found."},
     )
 
-@app.post("/prompts-post/add_new_prompt", tags=["Prompts"])
+@app.post("/prompts-post/add_edit_prompt", tags=["Prompts"])
 async def add_new_prompt(prompt: Prompts):
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
     title_list = [d["title"] for d in result]
     if prompt.title in title_list:
-        raise HTTPException(status_code=400, detail="Title already exists.")
+        print("A prompt with the same name already exists. Overwriting process has been executed.")
+        #raise HTTPException(status_code=400, detail="Title already exists.")
     
     await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting)
 
