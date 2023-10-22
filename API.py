@@ -159,9 +159,18 @@ async def add_Dict(item: Dict):
 async def get_Dict():
     return GlobalValues.custom_value_unity
 
-# save csv data
-async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, total_tokens):
-    # 現在のUTCタイムスタンプを取得
+# GPTのクエリをCSVに保存する関数
+async def log_gpt_query_to_csv(prompt, model, prompt_tokens, completion_tokens, total_tokens):
+    """
+    GPTのクエリデータをCSVコストファイルに保存します。
+
+    Parameters:
+    - prompt: GPTに入力されたプロンプト
+    - model: 使用されたGPTのモデル名
+    - prompt_tokens: プロンプトのトークン数
+    - completion_tokens: GPTの応答のトークン数
+    - total_tokens: 全体のトークン数
+    """
     timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
     # データをリストとして格納
@@ -183,8 +192,19 @@ async def log_gpt_query_to_csv(prompt,model, prompt_tokens, completion_tokens, t
         writer = csv.writer(file)
         writer.writerow(data_row)
 
-# jsonデータをリストで取得する
+# jsonデータをリストで取得する関数
 def get_file_list(search_query=None):
+    """
+    'data' ディレクトリ内のJSONファイルのリストを返します。
+    オプションで特定のクエリを含むファイルだけをフィルタリングすることができます。
+
+    Parameters:
+    - search_query: フィルタリングするための文字列（省略可能）
+
+    Returns:
+    - json_files: JSONファイルのリスト
+    """
+
     all_files = os.listdir("data")
     json_files = [f for f in all_files if f.endswith('.json')]
     
@@ -194,8 +214,18 @@ def get_file_list(search_query=None):
         
     return json_files
 
-#プロンプトリストの取得
+# プロンプトリストの取得関数
 async def get_prompts_list(search_query=None):
+    """
+    指定されたクエリにマッチするJSONファイルから、プロンプトのリストを取得します。
+
+    Parameters:
+    - search_query: フィルタリングするための文字列（省略可能）
+
+    Returns:
+    - result: プロンプトデータのリスト
+    """
+    
     json_file_list = get_file_list(search_query)
     result = []
 
@@ -207,8 +237,18 @@ async def get_prompts_list(search_query=None):
             result.append(data)
     return result
 
-#プロンプト履歴の取得
+# プロンプト履歴の取得関数
 async def get_history(name):
+    """
+    指定された名前のJSONファイルから、プロンプトの履歴を取得します。
+
+    Parameters:
+    - name: JSONファイルの名前
+
+    Returns:
+    - result: プロンプトの履歴データ
+    """
+
     result = None
     with open(f"data/{name}.json", 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -216,8 +256,21 @@ async def get_history(name):
                 result = data['history']
     return result
 
-# Jsonデータを作成or編集する
-async def Create_or_add_json_data(title,description=None,prompt_text=None,settings=None,history=None):
+# Jsonデータを作成or編集する関数
+async def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None, history=None):
+    """
+    JSONファイルを新規作成するか、既存のものにデータを追加/編集します。
+    
+    Parameters:
+    - title: JSONファイルのタイトル（ファイル名）
+    - description: 説明文（省略可能）
+    - prompt_text: プロンプトのテキスト情報（省略可能）
+    - settings: 設定の情報（省略可能）
+    - history: 履歴の情報（省略可能）
+
+    Returns:
+    なし
+    """
     json_file_list = get_file_list()
     json_file_name = title + ".json"
     json_file_path = os.path.join(prompt_folder_path,json_file_name)
@@ -262,8 +315,20 @@ async def Create_or_add_json_data(title,description=None,prompt_text=None,settin
     with open(json_file_path, "w", encoding='utf-8') as json_file:
         json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
-#GPTに問い合わせ実施
-async def GPT_request_API(name,user_prompts=[],values={},queue=None):
+# GPTに問い合わせを実施する関数
+async def GPT_request_API(name, user_prompts=[], values={}, queue=None):
+    """
+    GPT APIへの問い合わせを行い、返ってきたレスポンスを処理します。
+    
+    Parameters:
+    - name: 問い合わせに使用するJSONファイルの名前
+    - user_prompts: ユーザーからの追加のプロンプト (省略可能)
+    - values: プレースホルダーを置き換えるためのキーと値のマッピング (省略可能)
+    - queue: キュー処理に関連する変数 (省略可能)
+
+    Returns:
+    GPTからのレスポンスの内容
+    """
     #jsonデータの検索
     prompt_list = GlobalValues.prompt_list
     filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
