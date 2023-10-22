@@ -94,7 +94,7 @@ def display_prompt_text(test_dict):
 
 if __name__ == "__main__":
     # 初期化
-    if 'selected_item' not in st.session_state:
+    if "selected_item" not in st.session_state:
         st.session_state.selected_item = None
     
     prompts = fetch_data_from_api()
@@ -103,7 +103,3 @@ if __name__ == "__main__":
     # 選択されたデータの詳細を表示
     if st.session_state.selected_item:
         display_selected_item_details()
-
-    if not os.environ.get("STREAMLIT_RUN"):
-        os.environ["STREAMLIT_RUN"] = "true"
-        os.system(f"streamlit run {os.path.abspath(__file__)}")
