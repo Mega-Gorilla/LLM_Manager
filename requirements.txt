@@ -3,3 +3,5 @@ openai
 fastapi
 uvicorn
 tiktoken
+streamlit
+requests
