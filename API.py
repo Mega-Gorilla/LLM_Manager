@@ -118,7 +118,7 @@ async def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d
     print(f"{day}: {model_summary}")
     return {"day": str(day), "model_summary": model_summary}
 
-@app.post("/requst/openai-post/{prompt_name}", tags=["OpenAI"])
+@app.post("/request/openai-post/{prompt_name}", tags=["OpenAI"])
 async def OpenAI_request(prompt_name: str, value: variables_dict = None, stream: bool=False):
     if prompt_name == "template":
         raise HTTPException(status_code=400, detail="Editing Template.json is prohibited.\nPlease enter another json file.")
