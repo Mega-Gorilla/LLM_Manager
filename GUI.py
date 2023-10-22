@@ -25,7 +25,17 @@ def edit_prompt_from_api(send_data):
     return response
 
 def show_sidebar_buttons(data):
-    if st.sidebar.button("New Prompt",type="primary"):
+    def apply_css():
+        st.markdown("""
+        <style>
+            .stButton>button {
+                text-align: left;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    st.sidebar.title("GPT Manager")
+    st.sidebar.markdown("* * *")
+    if st.sidebar.button("Create New Prompt",type="primary",use_container_width=True):
         st.session_state.selected_item = {
             "title": "",
             "description": "",
@@ -42,9 +52,12 @@ def show_sidebar_buttons(data):
                     },
                 "variables":{}
                     }
+    
+    st.sidebar.markdown("")
+    apply_css()
     for item in data:
-        button_label = f"**{item['title']}**\n\n{item['description']}"
-        if st.sidebar.button(button_label, key=item['title']):
+        button_label = f"**[{item['title']}]**\n{item['description']}"
+        if st.sidebar.button(button_label, key=item['title'],use_container_width=True):
             st.session_state.selected_item = item
 
 def display_selected_item_details():
@@ -79,7 +92,7 @@ def display_selected_item_details():
 
     variables_dict = st.text_area(label='Variables(未実装)',value=variables_dict)
 
-    if st.button('Submit'):
+    if st.button('Save'):
         setting_dict = {'model': setting_model, 'temperature': setting_temp, 'top_p': setting_topP, 'max_tokens': setting_length, 'presence_penalty': setting_penalty, 'frequency_penalty': setting_frequency}
         submit_data = {"title":title , "description":dscription} | {'texts':prompt_data} | {'setting':setting_dict}
         
