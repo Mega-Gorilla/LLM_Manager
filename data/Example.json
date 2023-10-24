@@ -160,6 +160,93 @@
                     "system": "Describe the moon in detail."
                 }
             ]
+        },
+        {
+            "id": "chatcmpl-8CW9LRDwr8UJJ5OTbO3jocKbe1a1E",
+            "object": "chat.completion",
+            "created": 1697994211,
+            "model": "gpt-3.5-turbo-0613",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
+                    },
+                    "finish_reason": "length"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 13,
+                "completion_tokens": 256,
+                "total_tokens": 269
+            },
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8CWApsrHvm9arllBzGrnOdh7ljf3A",
+            "object": "chat.completion",
+            "created": 1697994303,
+            "model": "gpt-3.5-turbo-0613",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
+                    },
+                    "finish_reason": "length"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 13,
+                "completion_tokens": 256,
+                "total_tokens": 269
+            },
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8CWBge7MWXrsy9I4oFuj5KKCBViJf",
+            "object": "chat.completion",
+            "created": 1697994356,
+            "model": "gpt-3.5-turbo-0613",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
+                    },
+                    "finish_reason": "length"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 13,
+                "completion_tokens": 256,
+                "total_tokens": 269
+            },
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
         }
     ]
 }
