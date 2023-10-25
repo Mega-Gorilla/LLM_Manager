@@ -5,6 +5,7 @@ from rich import print
 from fastapi import FastAPI, Request,HTTPException,Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from pydantic.json import pydantic_encoder
 from typing import Optional, Dict, List,Any,Union
 from datetime import datetime,date
 import os, json, shutil, re, csv
@@ -30,6 +31,7 @@ class Prompts(BaseModel):
     description: str= Field(default="Prompt Description")
     texts: dict = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}."})
     setting: Settings
+    other: dict
 
 class variables_dict(BaseModel):
     user_assistant_prompt: List[Dict[str, str]] = Field(default=[{"user": "こんにちわ!みらい"}])
@@ -56,8 +58,8 @@ async def add_new_prompt(prompt: Prompts):
     if prompt.title in title_list:
         print("A prompt with the same name already exists. Overwriting process has been executed.")
         #raise HTTPException(status_code=400, detail="Title already exists.")
-    
-    await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting)
+    print(prompt)
+    await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting, other=prompt.other)
 
 @app.get("/prompts-get/get_prompt_metadata", tags=["Prompts"])
 async def get_all_prompts_data():
@@ -233,8 +235,6 @@ async def get_prompts_list(search_query=None):
     for json_file in json_file_list:
         with open(f"data/{json_file}", 'r', encoding='utf-8') as f:
             data = json.load(f)
-            if 'history' in data:
-                del data['history']
             result.append(data)
     return result
 
@@ -258,7 +258,7 @@ async def get_history(name):
     return result
 
 # Jsonデータを作成or編集する関数
-async def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None, history=None):
+async def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None, history=None,other=None):
     """
     JSONファイルを新規作成するか、既存のものにデータを追加/編集します。
     
@@ -306,9 +306,14 @@ async def Create_or_add_json_data(title, description=None, prompt_text=None, set
         json_data['variables'] = placeholder_dict
 
     if settings is not None:
-        settings_dict = settings.dict()
+        settings_json = json.dumps(settings, default=pydantic_encoder)
+        settings_dict = json.loads(settings_json)
+        
         for key, value in settings_dict.items():
-            json_data['setting'][key]= value
+            json_data['setting'][key] = value
+    
+    if other is not None:
+        json_data['other']=other
     
     if history is not None:
         json_data['history'].append(history)
