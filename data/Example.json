@@ -13,13 +13,13 @@
         "frequency_penalty": 1.0
     },
     "variables": {
-        "question": ""
+        "question": "質問を入力"
     },
     "history": [
         {
-            "id": "chatcmpl-8CVuLn0Rkj1q9Jqx2Et0liivM5v0A",
+            "id": "chatcmpl-8DXzTcvZaqHYLAgyKS7xvRx0soLWA",
             "object": "chat.completion",
-            "created": 1697993281,
+            "created": 1698239615,
             "model": "gpt-3.5-turbo-0613",
             "choices": [
                 {
@@ -46,16 +46,16 @@
             ]
         },
         {
-            "id": "chatcmpl-8CW11A5HgURzUzzs2ZvNG44hVgNVU",
+            "id": "chatcmpl-8DZKtOTyzqMg7NOo0S048SmovCkhN",
             "object": "chat.completion",
-            "created": 1697993695,
+            "created": 1698244787,
             "model": "gpt-3.5-turbo-0613",
             "choices": [
                 {
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
+                        "content": "The desk is made of sturdy oak wood, giving it a rich and elegant appearance. It has a rectangular shape with clean lines and a smooth surface. The dimensions of the desk are approximately 60 inches in length, 30 inches in width, and 30 inches in height.\n\nThe desk features a spacious tabletop that provides ample space for working, studying, or organizing paperwork. The surface is smooth and polished, allowing for easy writing and typing. There are no visible scratches or marks, indicating that the desk is well-maintained.\n\nThe desk is supported by four sturdy legs, each with a square shape. The legs are evenly spaced and provide stability to the desk. They are also made of oak wood and have a matching finish to the tabletop.\n\nThere are two drawers on the right side of the desk, providing convenient storage for office supplies, stationery, or personal items. The drawers have sleek metal handles that complement the overall design of the desk. They open and close smoothly, indicating that the drawers are in good working condition.\n\nThe desk also features a built-in cable management system, with a discreet opening at the back of the tabletop. This allows for easy organization and concealment of cables, keeping the workspace neat and clutter-free.\n\nOverall, the desk is a high-quality"
                     },
                     "finish_reason": "length"
                 }
@@ -66,25 +66,25 @@
                 "total_tokens": 269
             },
             "variables": {
-                "question": "moon"
+                "question": "Desk"
             },
             "prompt": [
                 {
-                    "system": "Describe the moon in detail."
+                    "system": "Describe the Desk in detail."
                 }
             ]
         },
         {
-            "id": "chatcmpl-8CW3zAhQ7scsLFtK6TyfeOWmGfqXQ",
+            "id": "chatcmpl-8DZN6YEajU0nv1j4GAxb9yVjzjsBr",
             "object": "chat.completion",
-            "created": 1697993879,
+            "created": 1698244924,
             "model": "gpt-3.5-turbo-0613",
             "choices": [
                 {
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
+                        "content": "The character is a young woman in her early twenties named Emily. She has long, flowing chestnut hair that falls in loose waves down to her waist. Her hair is often pulled back in a messy bun, with a few strands framing her heart-shaped face. Emily's eyes are a striking shade of emerald green, which sparkle with curiosity and intelligence. They are framed by long, dark lashes that give her a doe-eyed appearance.\n\nEmily has a slender and graceful figure, standing at an average height. She has a fair complexion with a hint of rosy cheeks, giving her a youthful and vibrant look. Her lips are naturally full and pink, often adorned with a soft smile that radiates warmth and kindness.\n\nHer style of dressing is casual yet chic. Emily prefers comfortable clothing, often opting for jeans or leggings paired with cozy sweaters or flowy blouses. She enjoys accessorizing with delicate jewelry, such as dainty necklaces or simple hoop earrings. Emily's fashion choices reflect her free-spirited nature and love for simplicity.\n\nIn terms of personality, Emily is an extroverted and outgoing individual. She possesses a natural charm and charisma that draws people towards her. She is known for her infectious laughter and ability to make others feel at ease in her presence."
                     },
                     "finish_reason": "length"
                 }
@@ -95,25 +95,25 @@
                 "total_tokens": 269
             },
             "variables": {
-                "question": "moon"
+                "question": "char"
             },
             "prompt": [
                 {
-                    "system": "Describe the moon in detail."
+                    "system": "Describe the char in detail."
                 }
             ]
         },
         {
-            "id": "chatcmpl-8CW66ud49gLgajnAuoRPZtumU1S4N",
+            "id": "chatcmpl-8DZZKeFDPWiQzyIw1HjLFh3WkC1fb",
             "object": "chat.completion",
-            "created": 1697994010,
+            "created": 1698245682,
             "model": "gpt-3.5-turbo-0613",
             "choices": [
                 {
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
+                        "content": "The Box is a rectangular container made of sturdy cardboard material. It has a length of 12 inches, a width of 8 inches, and a height of 6 inches. The exterior of the Box is plain brown in color, with no patterns or designs. It is sealed with adhesive tape on all sides to ensure that the contents inside are secure.\n\nThe Box has a hinged lid that opens and closes easily. The lid is slightly larger than the base of the Box, providing a snug fit when closed. It has a small tab on one side, making it convenient to lift and open the lid.\n\nInside the Box, there is a spacious compartment that can hold various items. The interior dimensions are the same as the exterior, with a length of 12 inches, a width of 8 inches, and a height of 6 inches. The walls of the Box are smooth and free from any obstructions, allowing for easy placement and removal of objects.\n\nThe Box is lightweight yet durable, capable of withstanding moderate pressure and impact. It is designed to protect the contents from external elements such as dust, moisture, and light. The cardboard material provides a certain level of insulation, preventing extreme temperature changes.\n\nOverall, the Box is a simple and functional container that is suitable"
                     },
                     "finish_reason": "length"
                 }
@@ -124,129 +124,18 @@
                 "total_tokens": 269
             },
             "variables": {
-                "question": "moon"
+                "question": "Box"
             },
             "prompt": [
                 {
-                    "system": "Describe the moon in detail."
-                }
-            ]
-        },
-        {
-            "id": "chatcmpl-8CW7CVrvxS9PVMjSIav5wNTDukZVj",
-            "object": "chat.completion",
-            "created": 1697994078,
-            "model": "gpt-3.5-turbo-0613",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
-                    },
-                    "finish_reason": "length"
-                }
-            ],
-            "usage": {
-                "prompt_tokens": 13,
-                "completion_tokens": 256,
-                "total_tokens": 269
-            },
-            "variables": {
-                "question": "moon"
-            },
-            "prompt": [
-                {
-                    "system": "Describe the moon in detail."
-                }
-            ]
-        },
-        {
-            "id": "chatcmpl-8CW9LRDwr8UJJ5OTbO3jocKbe1a1E",
-            "object": "chat.completion",
-            "created": 1697994211,
-            "model": "gpt-3.5-turbo-0613",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
-                    },
-                    "finish_reason": "length"
-                }
-            ],
-            "usage": {
-                "prompt_tokens": 13,
-                "completion_tokens": 256,
-                "total_tokens": 269
-            },
-            "variables": {
-                "question": "moon"
-            },
-            "prompt": [
-                {
-                    "system": "Describe the moon in detail."
-                }
-            ]
-        },
-        {
-            "id": "chatcmpl-8CWApsrHvm9arllBzGrnOdh7ljf3A",
-            "object": "chat.completion",
-            "created": 1697994303,
-            "model": "gpt-3.5-turbo-0613",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
-                    },
-                    "finish_reason": "length"
-                }
-            ],
-            "usage": {
-                "prompt_tokens": 13,
-                "completion_tokens": 256,
-                "total_tokens": 269
-            },
-            "variables": {
-                "question": "moon"
-            },
-            "prompt": [
-                {
-                    "system": "Describe the moon in detail."
-                }
-            ]
-        },
-        {
-            "id": "chatcmpl-8CWBge7MWXrsy9I4oFuj5KKCBViJf",
-            "object": "chat.completion",
-            "created": 1697994356,
-            "model": "gpt-3.5-turbo-0613",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": "The moon is Earth's only natural satellite and is the fifth-largest moon in the solar system. It has a diameter of about 3,474 kilometers (2,159 miles) and is approximately one-fourth the size of Earth. The moon is located about 384,400 kilometers (238,900 miles) away from Earth and takes about 27.3 days to complete one orbit around our planet.\n\nThe moon's surface is covered with various features, including craters, mountains, valleys, and plains. The most prominent feature is the large, dark areas known as maria, which are ancient volcanic plains. These maria were formed by volcanic activity billions of years ago and are made up of basaltic rock. The lighter areas on the moon's surface are called highlands and are composed of a different type of rock called anorthosite.\n\nThe moon's surface is heavily cratered, with impact craters of various sizes scattered across its landscape. These craters were formed by the impact of asteroids, comets, and meteoroids over billions of years. Some of the most famous craters on the moon include Tycho, Copernicus, and Aristarchus.\n\nThe moon has a very thin atmosphere, known as an exosphere, which consists of trace"
-                    },
-                    "finish_reason": "length"
-                }
-            ],
-            "usage": {
-                "prompt_tokens": 13,
-                "completion_tokens": 256,
-                "total_tokens": 269
-            },
-            "variables": {
-                "question": "moon"
-            },
-            "prompt": [
-                {
-                    "system": "Describe the moon in detail."
+                    "system": "Describe the Box in detail."
                 }
             ]
         }
-    ]
+    ],
+    "other": {
+        "translate_text": {
+            "system": "{質問｝を詳しく説明してください。"
+        }
+    }
 }
