@@ -31,6 +31,7 @@ class Prompts(BaseModel):
     description: str= Field(default="Prompt Description")
     texts: dict = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}."})
     setting: Settings
+    variables : dict
     other: dict
 
 class variables_dict(BaseModel):
@@ -59,7 +60,7 @@ async def add_new_prompt(prompt: Prompts):
         print("A prompt with the same name already exists. Overwriting process has been executed.")
         #raise HTTPException(status_code=400, detail="Title already exists.")
     print(prompt)
-    await Create_or_add_json_data(prompt.title, prompt.description, prompt.texts, prompt.setting, other=prompt.other)
+    await Create_or_add_json_data(title=prompt.title, description=prompt.description, prompt_text=prompt.texts, settings=prompt.setting,variables=prompt.variables, other=prompt.other)
 
 @app.get("/prompts-get/get_prompt_metadata", tags=["Prompts"])
 async def get_all_prompts_data():
@@ -258,7 +259,7 @@ async def get_history(name):
     return result
 
 # Jsonデータを作成or編集する関数
-async def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None, history=None,other=None):
+async def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None,variables=None,history=None,other=None):
     """
     JSONファイルを新規作成するか、既存のものにデータを追加/編集します。
     
@@ -302,7 +303,11 @@ async def Create_or_add_json_data(title, description=None, prompt_text=None, set
                 placeholders = re.findall(r'{(.*?)}', value)
                 for placeholder in placeholders:
                     placeholder_dict[placeholder] = ""
-        
+    
+    if variables is not None:
+        add_value_dict = {key: variables[key] for key in placeholder_dict if key in variables}
+        json_data['variables'] = add_value_dict
+    else:
         json_data['variables'] = placeholder_dict
 
     if settings is not None:

@@ -89,13 +89,14 @@ def show_sidebar_buttons(data):
                     "presence_penalty": 0,
                     "frequency_penalty": 0
                     },
-                "variables":{}
+                "variables":{},
+                "history":[]
                     }
     
     st.sidebar.markdown("Select Prompt:")
     apply_css()
     for item in data:
-        button_label = f"**[{item['title']}]**\n\n{item['description']}"
+        button_label = f"**{item['title']}**"
         if st.sidebar.button(button_label, key=item['title'],use_container_width=True):
             st.session_state.selected_item = item
 
@@ -122,6 +123,21 @@ def display_selected_item_details():
         **{dscription}**
         """, unsafe_allow_html=True)
     
+    #Display Prompt
+    st.markdown("* * *\n**Prompt:**")
+    prompt_data = display_prompt_text(text_dict)
+
+    #Translate Prompt
+    translate_button_clicked = st.button('Translate JP',use_container_width=True)
+    if translate_text !=None:
+        st.markdown("**Translate Prompt:**")
+        translate_text = display_prompt_text(translate_text)
+
+    #variables
+    if variables_dict != {}:
+        st.markdown("* * *\n**Variable:**")
+        variables_data = display_prompt_text(variables_dict)
+
     #Settings
     st.markdown("* * *\n**Settings:**")
     setting_model = st.selectbox(f"Model: {setting_dict['model']}",LLM_model_name,LLM_model_name.index(setting_dict['model']))
@@ -131,24 +147,12 @@ def display_selected_item_details():
     setting_frequency = st.slider(f"Frequency penalty: {setting_dict['frequency_penalty']}",0.0,2.0,float(setting_dict['top_p']),0.01)
     setting_penalty = st.slider(f"Presence Penalty: {setting_dict['presence_penalty']}",0.0,2.0,float(setting_dict['presence_penalty']),0.01)
 
-    #Display Prompt
-    st.markdown("* * *\n**Prompt:**")
-    prompt_data = display_prompt_text(text_dict)
-
-    #Translate Prompt
-    translate_button_clicked = st.button('Translate JP',use_container_width=True)
-    if translate_text !=None:
-        st.markdown("**Translate Prompt:**")
-        display_prompt_text(translate_text)
-
-    #variables
-    st.markdown("* * *\n**Variable**")
-    variables_dict = st.text_area(label='Variables(未実装)',value=variables_dict)
-
     #保存・問合せボタン
+    st.markdown("* * *")
     save_button_clicked = st.button('Save',use_container_width=True)
     submit_buttion_clicked = st.button('Submit',use_container_width=True,type="primary")
     submit_info = st.empty()
+
     #submitデータ
     st.markdown("* * *")
     submit_result = st.empty()
@@ -200,6 +204,7 @@ def display_selected_item_details():
         submit_data = {"title":title , "description":dscription}
         submit_data |= {'texts':prompt_data}
         submit_data |= {'setting':setting_dict}
+        submit_data |= {'variables':variables_data}
         submit_data |= {'other':{'translate_text':translate_text}}
         edit_prompt_from_api(submit_data)
 
