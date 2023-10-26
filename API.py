@@ -66,8 +66,6 @@ async def add_new_prompt(prompt: Prompts):
 async def get_all_prompts_data():
     result = await get_prompts_list()
     GlobalValues.prompt_list = result
-    print("PromptsData:")
-    print(result)
     return result
 
 @app.get("/prompts-get/get_prompt_details", tags=["Prompts"])
@@ -300,15 +298,16 @@ async def Create_or_add_json_data(title, description=None, prompt_text=None, set
         
         for key, value in prompt_text.items():
             if isinstance(value, str):  # この例ではstr型だけを対象としています
-                placeholders = re.findall(r'{(.*?)}', value)
+                placeholders = re.findall(r'{([^{}"]+?)}', value)
                 for placeholder in placeholders:
                     placeholder_dict[placeholder] = ""
     
     if variables is not None:
-        add_value_dict = {key: variables[key] for key in placeholder_dict if key in variables}
-        json_data['variables'] = add_value_dict
-    else:
-        json_data['variables'] = placeholder_dict
+        if variables == {}:
+            json_data['variables'] = placeholder_dict
+        else:
+            add_value_dict = {key: variables[key] for key in placeholder_dict if key in variables}
+            json_data['variables'] = add_value_dict
 
     if settings is not None:
         settings_json = json.dumps(settings, default=pydantic_encoder)
@@ -355,12 +354,16 @@ async def GPT_request_API(name, user_prompts=[], values={}, queue=None):
     for key, value in filtered_list['text'].items():
         if isinstance(value, str):
             # 文字列内のプレースホルダー（{xxx}）を見つける
-            placeholders = re.findall(r'{(.*?)}', value)
-            
+            placeholders = re.findall(r'{([^{}"]+?)}', value)
             # values がすべてのプレースホルダーに対応するキーを持っているか確認
-            if all(placeholder in values for placeholder in placeholders):
-                if values:
-                    value = value.format(**values)
+            missing_placeholders = [placeholder for placeholder in placeholders if placeholder not in values]
+            if not missing_placeholders:
+                #もし、プロンプトに辞書配列を持つ場合誤検知しないように変更
+                dict_pattern = r"\{[^{]*?:[^{]*?\}"
+                def replacer(match):
+                    return match.group(0).replace("{", "{{").replace("}", "}}")
+                value = re.sub(dict_pattern, replacer, value)
+                value = value.format(**values) #プレースホルダの置き換え
             else:
                 print(f"Warning: Missing keys for placeholders in '{value}'")
 
