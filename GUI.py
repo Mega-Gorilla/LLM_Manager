@@ -38,7 +38,7 @@ def edit_prompt_from_api(send_data):
     response = requests.post(f"{BASE_URL}/prompts-post/add_edit_prompt", json_data)
     response=response.json()
     if response!=None:
-        error = st.warning(f"Error: {response.json()}")
+        error = st.warning(f"Error: {response}")
     else:
         success = st.success(f"Data was saved.")
         time.sleep(1)
@@ -46,15 +46,16 @@ def edit_prompt_from_api(send_data):
     return response
 
 def submit_openai(prompt_name,prompt,variables,object):
+    print(f"data:  {variables}")
     json_data= {
         "user_assistant_prompt": prompt,
-            "variables": ast.literal_eval(variables)
+            "variables": variables
             }
     json_data= json.dumps(json_data, indent=4)
     response = requests.post(f"{BASE_URL}/request/openai-post/{prompt_name}?stream=false", json_data)
     
     if response.status_code!=200:
-        error = object.warning(f"Error: {response.json()}")
+        error = object.warning(f"Error: {response}")
         response = None
     else:
         success = object.success(f"Submittied!!")
@@ -137,6 +138,8 @@ def display_selected_item_details():
     if variables_dict != {}:
         st.markdown("* * *\n**Variable:**")
         variables_data = display_prompt_text(variables_dict)
+    else:
+        variables_data = {}
 
     #Settings
     st.markdown("* * *\n**Settings:**")
@@ -210,7 +213,7 @@ def display_selected_item_details():
 
     if submit_buttion_clicked:
         submit_info.info('Connecting to the server. Please wait...')
-        result = submit_openai(title,[],variables_dict,submit_info)
+        result = submit_openai(title,[],variables_data,submit_info)
         if result !=None:
             submit_result.text_area(label="Result", value=result,height=result.count('\n')*50)
 
