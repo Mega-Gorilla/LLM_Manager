@@ -33,14 +33,14 @@ def fetch_data_from_api():
     response.raise_for_status()
     return response.json()
 
-def edit_prompt_from_api(send_data):
+def edit_prompt_from_api(send_data,object):
     json_data= json.dumps(send_data, indent=4)
     response = requests.post(f"{BASE_URL}/prompts-post/add_edit_prompt", json_data)
     response=response.json()
     if response!=None:
-        error = st.warning(f"Error: {response}")
+        error = object.warning(f"Error: {response}")
     else:
-        success = st.success(f"Data was saved.")
+        success = object.success(f"Data was saved.")
         time.sleep(1)
         success.empty()
     return response
@@ -166,7 +166,7 @@ def display_selected_item_details():
         st.markdown("* * *\n**History**")
         for history in history_dict:
             expander_title = [f"{key} : {value}" for key, value in history['variables'].items()]
-            with st.expander(" / ".join(expander_title)):
+            with st.expander(" / ".join(expander_title)[:100]):
                 st.markdown(f"### Responce\n```\n{history['choices'][0]['message']['content']}\n```")
                 st.markdown(f"### Prompt")
                 for key,value in history['prompt'][0].items():
@@ -209,7 +209,7 @@ def display_selected_item_details():
         submit_data |= {'setting':setting_dict}
         submit_data |= {'variables':variables_data}
         submit_data |= {'other':{'translate_text':translate_text}}
-        edit_prompt_from_api(submit_data)
+        edit_prompt_from_api(submit_data,submit_info)
 
     if submit_buttion_clicked:
         submit_info.info('Connecting to the server. Please wait...')
