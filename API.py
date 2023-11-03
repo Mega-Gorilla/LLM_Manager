@@ -1,5 +1,4 @@
 #API.py
-from module.GPT_request import GPT_request
 from module.rich_desgin import error
 from rich import print
 from fastapi import FastAPI, BackgroundTasks,Request,HTTPException,Query
@@ -12,6 +11,7 @@ import os, json, shutil, re, csv
 import asyncio
 import time
 import openai
+import tiktoken
 
 app = FastAPI(title='GPT Manger API',version='β2.0')
 
@@ -53,9 +53,8 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     # アプリ終了時にセッションを閉じる
-    session = openai.aiosession.get()
-    if session:
-        await session.close()
+    print("Finished OpenAI aiosession")
+    await openai.aiosession.get().close()
 
 @app.post("/prompts-post/add_edit_prompt", tags=["Prompts"])
 def add_new_prompt(prompt: Prompts):
@@ -141,14 +140,14 @@ def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
     return {"day": str(day), "model_summary": model_summary}
 
 @app.post("/openai/request/", tags=["OpenAI"])
-def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream: bool=False):
+def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
     """
     OpenAI APIにリクエストします。
     **パラメータ:**
     - prompt_name: プロンプト名を設定してください。
     - request_id: レスポンスデータのkeyとして用いられます。設定しなかった場合は、prompt_nameがkeyとなります。
     - variables_dict: プロンプトに{関数名}で囲まれた関数がある場合、辞書配列を入力することでプロンプト内の{}を設定した文字列に書き換えます。
-    - Stream: Stream問合せを実行するかBoolで設定します。
+    - stream_mode: Stream問合せを実行するかBoolで設定します。
     """
     if request_id == None:
         request_id = prompt_name
@@ -156,6 +155,7 @@ def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_i
                                request_id=request_id,
                                user_prompts= value.user_assistant_prompt,
                                variables=value.variables)
+    kwargs['stream_mode']=stream_mode
     
     background_tasks.add_task(create_chat_completion,**kwargs)
     if 'ok' in kwargs.keys():
@@ -168,6 +168,13 @@ async def openai_get(reset: bool =False):
     return_data=LLM_request.chat_completion_object
     if reset:
         LLM_request.chat_completion_object=[]
+    return return_data
+
+@app.get("/openai/get-chunk/", tags=["OpenAI"])
+async def openai_get(reset: bool =False):
+    return_data=LLM_request.chat_completion_chank_object
+    if reset:
+        LLM_request.chat_completion_chank_object=[]
     return return_data
 
 # GPTのクエリをCSVに保存する関数
@@ -394,7 +401,11 @@ def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
     }
     return request_kwargs
 
-async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None):
+def talknizer(texts):
+        tokens = tiktoken.get_encoding('gpt2').encode(texts)
+        return len(tokens)
+
+async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
     
     Prompts=[]
     for original_dict in Prompt:
@@ -406,6 +417,7 @@ async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You a
     
     gpt_error_mapping = GPT_error_list()
     retry_count = 0
+    result_content = ""
     while retry_count < max_retries:
         try:
             # 非同期でチャットの応答を取得
@@ -416,8 +428,50 @@ async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You a
                 max_tokens=tokens_max,
                 top_p=top_p,
                 frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty
+                presence_penalty=presence_penalty,
+                stream=stream_mode
             )
+
+            if stream_mode:
+                fin_reason = None
+                async for chunk in chat_completion_resp:
+                    content = chunk["choices"][0].get("delta", {}).get("content", "")
+                    fin_reason = chunk["choices"][0].get("finish_reason")
+                    print(content,end='')
+                    result_content += content
+                    LLM_request.chat_completion_chank_object.append({"request_id":request_id,
+                                                                        'id':chunk["id"],
+                                                                        "message": content,
+                                                                        "index": chunk["choices"][0].get("index"),
+                                                                        'object':chunk["object"],
+                                                                        'object':chunk["object"],
+                                                                        'created':chunk["created"],
+                                                                        'model':chunk["model"],
+                                                                        "finish_reason": fin_reason})
+                    
+                    await asyncio.sleep(0)
+                print(f"\nFin Reason: {fin_reason}")
+                prompt_tokens=talknizer(''.join([item['content'] for item in Prompts]))
+                completion_tokens=talknizer(result_content)
+                chat_completion_resp = {
+                    "id": chunk["id"],
+                    "object": chunk["object"],
+                    "created": chunk["created"],
+                    "model": chunk["model"],
+                    "choices": [{
+                        "index": chunk["choices"][0].get("index"),
+                        "message": {
+                        "role": "assistant",
+                        "content": result_content,
+                        },
+                        "finish_reason": fin_reason
+                        }],
+                    "usage": {
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": prompt_tokens+completion_tokens
+                    }}
+
             # 辞書配列に結果を格納
             chat_completion_resp.update({'request_id':request_id,'ok':True})
             if add_responce_dict != None:
@@ -442,7 +496,7 @@ async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You a
                 return
             elif action == 'sleep':
                 await asyncio.sleep(1)
-                
+
     LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':'Request Time out'})
     return 
 
