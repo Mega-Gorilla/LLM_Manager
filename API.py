@@ -2,20 +2,28 @@
 from module.GPT_request import GPT_request
 from module.rich_desgin import error
 from rich import print
-from fastapi import FastAPI, Request,HTTPException,Query
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, BackgroundTasks,Request,HTTPException,Query
 from pydantic import BaseModel, Field
 from pydantic.json import pydantic_encoder
-from typing import Optional, Dict, List,Any,Union
+from typing import Optional, Dict, List,Any
 from datetime import datetime,date
+from aiohttp import ClientSession
 import os, json, shutil, re, csv
 import asyncio
 import time
+import openai
 
-openai_key = os.getenv("OPENAI_API_KEY")
-prompt_folder_path = "data"
-app = FastAPI()
+app = FastAPI(title='GPT Manger API',version='β2.0')
 
+class config:
+    prompts_folder_path = "data"
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+class LLM_request:
+    chat_completion_object:List[Any]=[]
+    chat_completion_chank_object:List[Any]=[]
+
+#Prompt Json Settngs
 class Settings(BaseModel):
     model: str = Field(default="gpt-3.5-turbo")
     temperature: float = Field(default=1.00)
@@ -25,53 +33,68 @@ class Settings(BaseModel):
     frequency_penalty: float = Field(default=0.00)
     #logit_bias: Optional[Dict[int, Any]] = None  # Noneかfloatの辞書
 
-#item class
 class Prompts(BaseModel):
-    title: str = Field(default="Prompt Name")
-    description: str= Field(default="Prompt Description")
-    texts: dict = Field(default={"system":"You are a helpful assistant.And you need to advise about the {things}."})
+    title: str = "Prompt Name"
+    description: str= "Prompt Description"
+    texts: dict = {"system":"You are a helpful assistant.And you need to advise about the {things}."}
     setting: Settings
     variables : dict
     other: dict
 
 class variables_dict(BaseModel):
-    user_assistant_prompt: List[Dict[str, str]] = Field(default=[{"user": "こんにちわ!みらい"}])
-    variables: dict = Field(default={})
+    user_assistant_prompt: dict = {"user": "こんにちわ!みらい"}
+    variables: dict = {}
 
-class GlobalValues:
-    prompt_list = []
-    stream_queue= asyncio.Queue()
-    custom_value: List[Dict] = []
-    custom_value_unity: List[Dict] = []
-    
-@app.exception_handler(404)
-async def not_found_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=404,
-        content={"detail": "The resource you are looking for was not found."},
-    )
+@app.on_event("startup")
+async def startup_event():
+    # アプリ起動時にセッションを設定
+    openai.aiosession.set(ClientSession())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # アプリ終了時にセッションを閉じる
+    session = openai.aiosession.get()
+    if session:
+        await session.close()
 
 @app.post("/prompts-post/add_edit_prompt", tags=["Prompts"])
-async def add_new_prompt(prompt: Prompts):
-    result = await get_prompts_list()
-    GlobalValues.prompt_list = result
+def add_new_prompt(prompt: Prompts):
+    """
+    新しいプロンプトを追加または既存のプロンプトを編集します。
+    - `prompt`: 'Prompts'モデルに基づいて、タイトル、説明、テキスト、設定、変数、その他の情報が含まれます。
+    """
+    result = get_prompts_list()
     title_list = [d["title"] for d in result]
     if prompt.title in title_list:
         print("A prompt with the same name already exists. Overwriting process has been executed.")
         #raise HTTPException(status_code=400, detail="Title already exists.")
-    print(prompt)
-    await Create_or_add_json_data(title=prompt.title, description=prompt.description, prompt_text=prompt.texts, settings=prompt.setting,variables=prompt.variables, other=prompt.other)
+    Create_or_add_json_data(title=prompt.title, description=prompt.description, prompt_text=prompt.texts, settings=prompt.setting,variables=prompt.variables, other=prompt.other)
 
 @app.get("/prompts-get/get_prompt_metadata", tags=["Prompts"])
-async def get_all_prompts_data():
-    result = await get_prompts_list()
-    GlobalValues.prompt_list = result
+def get_all_prompts_data():
+    result = get_prompts_list()
     return result
 
 @app.get("/prompts-get/get_prompt_details", tags=["Prompts"])
-async def get_all_prompts_names():
-    result = await get_prompts_list()
-    GlobalValues.prompt_list = result
+def get_all_prompts_names():
+    """
+    プロンプト一覧を取得します。
+
+    **取得データ:**
+    - `title`: プロンプトのタイトル。
+    - `description`: プロンプトの説明。
+
+    **戻り値の例:**
+    ```json
+    {
+      "Caracter-LLM Meta Prompt for Trainable Agents": "トレーニング可能なエージェントのためのメタプロンプト",
+      "Character-LLM Meta Prompt for Baseline Instruction-following Models": "ベースライン指導フォローモデルのメタプロンプト"
+    }
+    ```
+
+    このエンドポイントは、システムに登録されている全てのプロンプトの名前と説明の一覧を返します。
+    """
+    result = get_prompts_list()
     new_dict = {}
     for item in result:
         title = item.get('title')
@@ -83,20 +106,18 @@ async def get_all_prompts_names():
     return new_dict
 
 @app.get("/prompts-get/lookup_prompt_by_name", tags=["Prompts"])
-async def get_prompt_data_by_name(prompt_name: str):
-    result = await get_prompts_list(prompt_name)
-    GlobalValues.prompt_list = result
-    print(result)
+def get_prompt_data_by_name(prompt_name: str):
+    result = get_prompts_list(prompt_name)
     return result
 
-@app.get("/prompts-get/history/{prompt_name}", tags=["Prompts"])
-async def get_history(prompt_name: str):
-    result = await get_history(prompt_name)
+@app.get("/prompts-get/history/", tags=["Prompts"])
+def get_history(prompt_name: str):
+    result = get_history(prompt_name)
     print(result)
     return result
 
 @app.get("/cost-get/day/", tags=["Cost"])
-async def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
+def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
     # 指定された日付のtotal_tokensの合計値
     model_summary = {}
 
@@ -119,55 +140,43 @@ async def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d
     print(f"{day}: {model_summary}")
     return {"day": str(day), "model_summary": model_summary}
 
-@app.post("/request/openai-post/{prompt_name}", tags=["OpenAI"])
-async def OpenAI_request(prompt_name: str, value: variables_dict = None, stream: bool=False):
-    if prompt_name == "template":
-        raise HTTPException(status_code=400, detail="Editing Template.json is prohibited.\nPlease enter another json file.")
+@app.post("/openai/request/", tags=["OpenAI"])
+def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream: bool=False):
+    """
+    OpenAI APIにリクエストします。
+    **パラメータ:**
+    - prompt_name: プロンプト名を設定してください。
+    - request_id: レスポンスデータのkeyとして用いられます。設定しなかった場合は、prompt_nameがkeyとなります。
+    - variables_dict: プロンプトに{関数名}で囲まれた関数がある場合、辞書配列を入力することでプロンプト内の{}を設定した文字列に書き換えます。
+    - Stream: Stream問合せを実行するかBoolで設定します。
+    """
+    if request_id == None:
+        request_id = prompt_name
+    kwargs = GPT_request_API(prompt_name=prompt_name,
+                               request_id=request_id,
+                               user_prompts= value.user_assistant_prompt,
+                               variables=value.variables)
     
-    if stream:
-        responce = await GPT_request_API(prompt_name, value.user_assistant_prompt,value.variables, GlobalValues.stream_queue)
-    else:
-        responce = await GPT_request_API(prompt_name, value.user_assistant_prompt,value.variables)
-    print(responce)
-    return responce
+    background_tasks.add_task(create_chat_completion,**kwargs)
+    if 'ok' in kwargs.keys():
+        if kwargs['ok'] != True:
+            return kwargs
+    return{'ok':True,'message':'GPT Request sent in the background'}
 
-@app.get("/requst/openai-get/queue", tags=["OpenAI"])
-async def get_queue():
-    if GlobalValues.stream_queue.qsize() != 0:
-        try:
-            result = await GlobalValues.stream_queue.get()
-            print(result)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"An error occurred while fetching from queue: {str(e)}")
-        return result
-    else:
-        raise HTTPException(status_code=404, detail="No data available in the stream queue.")
-
-@app.post("/custom/add/A",tags=["Custom"])
-async def add_Dict(item: Dict):
-    GlobalValues.custom_value = item
-    return item
-
-@app.get("/custom/get_data/A",tags=["Custom"])
-async def get_Dict():
-    return GlobalValues.custom_value
-
-@app.post("/custom/add/B",tags=["Custom"])
-async def add_Dict(item: Dict):
-    GlobalValues.custom_value_unity = item
-    return item
-
-@app.get("/custom/get_data/B",tags=["Custom"])
-async def get_Dict():
-    return GlobalValues.custom_value_unity
+@app.get("/openai/get/", tags=["OpenAI"])
+async def openai_get(reset: bool =False):
+    return_data=LLM_request.chat_completion_object
+    if reset:
+        LLM_request.chat_completion_object=[]
+    return return_data
 
 # GPTのクエリをCSVに保存する関数
-async def log_gpt_query_to_csv(prompt, model, prompt_tokens, completion_tokens, total_tokens):
+def log_gpt_query_to_csv(prompt_name, model, prompt_tokens, completion_tokens, total_tokens):
     """
     GPTのクエリデータをCSVコストファイルに保存します。
 
     Parameters:
-    - prompt: GPTに入力されたプロンプト
+    - prompt_name: ロギングするプロンプト名
     - model: 使用されたGPTのモデル名
     - prompt_tokens: プロンプトのトークン数
     - completion_tokens: GPTの応答のトークン数
@@ -176,7 +185,7 @@ async def log_gpt_query_to_csv(prompt, model, prompt_tokens, completion_tokens, 
     timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
     # データをリストとして格納
-    data_row = [timestamp,model, prompt, prompt_tokens, completion_tokens, total_tokens]
+    data_row = [timestamp,model, prompt_name, prompt_tokens, completion_tokens, total_tokens]
     
     # 'data' ディレクトリが存在しない場合は作成
     if not os.path.exists('data'):
@@ -195,7 +204,7 @@ async def log_gpt_query_to_csv(prompt, model, prompt_tokens, completion_tokens, 
         writer.writerow(data_row)
 
 # jsonデータをリストで取得する関数
-def get_file_list(search_query=None):
+def get_file_list():
     """
     'data' ディレクトリ内のJSONファイルのリストを返します。
     オプションで特定のクエリを含むファイルだけをフィルタリングすることができます。
@@ -210,14 +219,11 @@ def get_file_list(search_query=None):
     all_files = os.listdir("data")
     json_files = [f for f in all_files if f.endswith('.json')]
     
-    # search_queryが存在する場合、該当するファイル名だけをフィルタします。
-    if search_query:
-        json_files = [f for f in json_files if search_query in f]
         
     return json_files
 
 # プロンプトリストの取得関数
-async def get_prompts_list(search_query=None):
+def get_prompts_list(search_query=None):
     """
     指定されたクエリにマッチするJSONファイルから、プロンプトのリストを取得します。
 
@@ -228,17 +234,23 @@ async def get_prompts_list(search_query=None):
     - result: プロンプトデータのリスト
     """
     
-    json_file_list = get_file_list(search_query)
+    json_file_list = get_file_list()
     result = []
-
-    for json_file in json_file_list:
-        with open(f"data/{json_file}", 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            result.append(data)
+    if search_query!=None:
+        if f"{search_query}.json" in json_file_list:
+            with open(f"data/{search_query}.json", 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            return {"ok":False,"message":"Prompt Data Not Found."}
+    else:
+        for json_file in json_file_list:
+            with open(f"data/{json_file}", 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                result.append(data)
     return result
 
 # プロンプト履歴の取得関数
-async def get_history(name):
+def get_history(name):
     """
     指定された名前のJSONファイルから、プロンプトの履歴を取得します。
 
@@ -257,7 +269,7 @@ async def get_history(name):
     return result
 
 # Jsonデータを作成or編集する関数
-async def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None,variables=None,history=None,other=None):
+def Create_or_add_json_data(title, description=None, prompt_text=None, settings=None,variables=None,history=None,other=None):
     """
     JSONファイルを新規作成するか、既存のものにデータを追加/編集します。
     
@@ -268,15 +280,14 @@ async def Create_or_add_json_data(title, description=None, prompt_text=None, set
     - settings: 設定の情報（省略可能）
     - history: 履歴の情報（省略可能）
 
-    Returns:
-    なし
     """
     json_file_list = get_file_list()
     json_file_name = title + ".json"
-    json_file_path = os.path.join(prompt_folder_path,json_file_name)
+    json_file_path = os.path.join(config.prompts_folder_path,json_file_name)
+
     if json_file_name not in json_file_list:
         #jsonファイルが存在しない場合新規作成する。
-        tempfilepath=os.path.join(prompt_folder_path,"template.json")
+        tempfilepath=os.path.join(config.prompts_folder_path,"template.json")
         if not os.path.exists(tempfilepath):
             error("template.json is Not Found.","[template.json] file not found in the [data] folder.")
             exit(1)
@@ -326,77 +337,126 @@ async def Create_or_add_json_data(title, description=None, prompt_text=None, set
         json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
 # GPTに問い合わせを実施する関数
-async def GPT_request_API(name, user_prompts=[], values={}, queue=None):
+def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
     """
     GPT APIへの問い合わせを行い、返ってきたレスポンスを処理します。
     
     Parameters:
     - name: 問い合わせに使用するJSONファイルの名前
     - user_prompts: ユーザーからの追加のプロンプト (省略可能)
-    - values: プレースホルダーを置き換えるためのキーと値のマッピング (省略可能)
-    - queue: キュー処理に関連する変数 (省略可能)
+    - variables: プレースホルダーを置き換えるためのキーと値のマッピング (省略可能)
 
     Returns:
     GPTからのレスポンスの内容
     """
     #jsonデータの検索
-    prompt_list = GlobalValues.prompt_list
-    filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
-    if len(filtered_list) == 0:
-        prompt_list=await get_prompts_list()
-        GlobalValues.prompt_list = prompt_list
-        filtered_list = [item for item in prompt_list if name.lower() == item['title'].lower()]
-    if len(filtered_list) == 0:
-        raise HTTPException(status_code=404, detail="The specified prompt could not be found.")
-    filtered_list = filtered_list[0]
+    prompt_list = get_prompts_list(prompt_name)
+    if 'ok' in prompt_list.keys():
+        if prompt_list['ok'] != True:
+            error("GPT Request Error","Prompt Data Not Found.",{"Prompt_name":prompt_name})
+            return{"ok":False,"message":"Prompt Data Not Found."}
 
-    text = []
-    for key, value in filtered_list['text'].items():
+    request_text = []
+    prompt_list['text'].update(user_prompts)
+    for key, value in prompt_list['text'].items():
         if isinstance(value, str):
             # 文字列内のプレースホルダー（{xxx}）を見つける
-            placeholders = re.findall(r'{([^{}"]+?)}', value)
-            # values がすべてのプレースホルダーに対応するキーを持っているか確認
-            missing_placeholders = [placeholder for placeholder in placeholders if placeholder not in values]
-            if not missing_placeholders:
-                #もし、プロンプトに辞書配列を持つ場合誤検知しないように変更
-                dict_pattern = r"\{[^{]*?:[^{]*?\}"
-                def replacer(match):
-                    return match.group(0).replace("{", "{{").replace("}", "}}")
-                value = re.sub(dict_pattern, replacer, value)
-                value = value.format(**values) #プレースホルダの置き換え
-            else:
-                print(f"Warning: Missing keys for placeholders in '{value}'")
-
-            text.append({key: value})
-    if user_prompts != []:
-        text+=user_prompts
-    if queue is None:
-        response = await GPT_request().GPT_request(filtered_list['title'],
-                                openai_key,
-                                text,
-                                filtered_list['setting']['temperature'],
-                                filtered_list['setting']['max_tokens'],
-                                filtered_list['setting']['model'])
-    else:
-        timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-        timestamp_name =name+" - "+ timestamp
-        response = await GPT_request().GPT_request_stream(queue,
-                                                timestamp_name,
-                                                openai_key,
-                                                text,
-                                                filtered_list['setting']['temperature'],
-                                                filtered_list['setting']['max_tokens'],
-                                                filtered_list['setting']['model'])
+            prompt_variables_lsit = re.findall(r'{([^{}"]+?)}', value)
+            prompt_variables_dict = {key: '' for key in prompt_variables_lsit}
+            #プロンプトのvariablesと提供されたvariablesが一致しているか確認する
+            if not all(key in variables for key in prompt_variables_dict):
+                error("GPT Request Error","prompt variables error.",{"Request Variables":variables,"Prompt Variables":prompt_variables_dict,"keys":key,"Prompt":value})
+                return{"ok":False,"message":f"prompt variables error."}
+            #必要なkeyだけ取り出し
+            for prompt_key in prompt_variables_dict:
+                if prompt_key in variables:
+                    prompt_variables_dict[prompt_key] = variables[prompt_key]
+            #プロンプトの{}部分の置換処理
+            for dict_key, dict_value in prompt_variables_dict.items():
+                # 正規表現を用いて、キーに合致する部分だけを厳密に置換する
+                value = re.sub(r'\{' + re.escape(dict_key) + r'\}', dict_value, value)
+            request_text.append({key: value})
+        else:
+            error("GPT Request Error","prompt text format error.",prompt_list['text'])
+            return{"ok":False,"message":f"prompt text format error. /{key}:{value}"}
     
-    #データ追加
-    response['variables']= values
-    response['prompt']= text
-    
-    #レスポンスをロギング
-    await Create_or_add_json_data(name,history=response)
-    await log_gpt_query_to_csv(name,filtered_list['setting']['model'],response["usage"]['prompt_tokens'],response["usage"]['completion_tokens'],response["usage"]['total_tokens'])
+    request_kwargs = {
+        'request_id':request_id,
+        'prompt_name':prompt_name,
+        'Prompt':request_text,
+        'model':prompt_list['setting']['model'],
+        'temp':prompt_list['setting']['temperature'],
+        'tokens_max':prompt_list['setting']['max_tokens'],
+        'top_p':prompt_list['setting']['top_p'],
+        'frequency_penalty':prompt_list['setting']['presence_penalty'],
+        'presence_penalty':prompt_list['setting']['frequency_penalty'],
+        'add_responce_dict':{'variables':variables,'prompt':request_text}
+    }
+    return request_kwargs
 
-    return response["choices"][0]["message"]["content"]
+async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None):
+    
+    Prompts=[]
+    for original_dict in Prompt:
+        transformed_dict = {}
+        for key, value in original_dict.items():
+            transformed_dict["role"] = key
+            transformed_dict["content"] = value
+        Prompts.append(transformed_dict)
+    
+    gpt_error_mapping = GPT_error_list()
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            # 非同期でチャットの応答を取得
+            chat_completion_resp = await openai.ChatCompletion.acreate(
+                model=model,
+                messages=Prompts,
+                temperature=temp,
+                max_tokens=tokens_max,
+                top_p=top_p,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty
+            )
+            # 辞書配列に結果を格納
+            chat_completion_resp.update({'request_id':request_id,'ok':True})
+            if add_responce_dict != None:
+                chat_completion_resp.update(add_responce_dict)
+
+            #応答を配列に追加
+            LLM_request.chat_completion_object.append(chat_completion_resp)
+
+            #データロギング
+            Create_or_add_json_data(prompt_name,history=chat_completion_resp)
+            log_gpt_query_to_csv(prompt_name,model,chat_completion_resp["usage"]['prompt_tokens'],chat_completion_resp["usage"]['completion_tokens'],chat_completion_resp["usage"]['total_tokens'])
+            return
+        except Exception as e:
+            retry_count+=1
+            title, message, action = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit'))
+            print(e)
+            e=str(e)+(f"\nmessages: {Prompts}\ntemperature: {temp}\nMax Tokens: {tokens_max}\ntop_p: {top_p}\nfrequency_penalty: {frequency_penalty}\npresence_penalty: {presence_penalty}")
+            error(title, message, e if action == 'exit' else None)
+            
+            if action == 'exit':
+                LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':e})
+                return
+            elif action == 'sleep':
+                await asyncio.sleep(1)
+                
+    LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':'Request Time out'})
+    return 
+
+def GPT_error_list():
+    gpt_error_mapping = {
+        openai.error.APIError: ("OpenAI API Error", "しばらく時間をおいてからリクエストを再試行し、問題が解決しない場合は弊社までご連絡ください。", 'sleep'),
+        openai.error.Timeout: ("OpenAI Timeout Error", "リクエストがタイムアウトしました。しばらく時間をおいてからリクエストを再試行し、問題が解決しない場合は弊社までご連絡ください。", 'sleep'),
+        openai.error.RateLimitError: ("OpenAI Rate Limit Error", "リクエストのペースを上げてください。詳しくはレート制限ガイドをご覧ください。", 'exit'),
+        openai.error.APIConnectionError: ("OpenAI API Connection Error", "ネットワーク設定、プロキシ設定、SSL証明書、またはファイアウォールルールを確認してください。", 'exit'),
+        openai.error.InvalidRequestError: ("OpenAI API Invalid Request Error", "エラーメッセージは、具体的なエラーについてアドバイスするはずです。呼び出している特定のAPIメソッドのドキュメントを確認し、有効で完全なパラメータを送信していることを確認してください。また、リクエストデータのエンコーディング、フォーマット、サイズを確認する必要があるかもしれません。", 'exit'),
+        openai.error.AuthenticationError: ("OpenAI Authentication Error", "APIキーまたはトークンを確認し、それが正しく、アクティブであることを確認してください。アカウントダッシュボードから新しいものを生成する必要があるかもしれません。", 'exit'),
+        openai.error.ServiceUnavailableError: ("OpenAI Service Unavailable Error", "しばらく時間をおいてからリクエストを再試行し、問題が解決しない場合はお問い合わせください。ステータスページをご確認ください。", 'sleep')
+    }
+    return gpt_error_mapping
 
 if __name__ == "__main__":
     import uvicorn
