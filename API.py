@@ -1,10 +1,8 @@
 #API.py
 from module.rich_desgin import error
-from rich import print
-from fastapi import FastAPI, BackgroundTasks,Request,HTTPException,Query
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel, Field
-from pydantic.json import pydantic_encoder
-from typing import Optional, Dict, List,Any
+from typing import List,Any
 from datetime import datetime,date
 from aiohttp import ClientSession
 import os, json, shutil, re, csv
