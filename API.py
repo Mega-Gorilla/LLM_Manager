@@ -1,7 +1,8 @@
 #API.py
 from module.rich_desgin import error
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks,Query
 from pydantic import BaseModel, Field
+from pydantic.json import pydantic_encoder
 from typing import List,Any
 from datetime import datetime,date
 from aiohttp import ClientSession
@@ -40,7 +41,7 @@ class Prompts(BaseModel):
     other: dict
 
 class variables_dict(BaseModel):
-    user_assistant_prompt: dict = {"user": "こんにちわ!みらい"}
+    user_assistant_prompt: dict = {}
     variables: dict = {}
 
 @app.on_event("startup")
@@ -141,11 +142,14 @@ def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
 def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
     """
     OpenAI APIにリクエストします。
+    
     **パラメータ:**
     - prompt_name: プロンプト名を設定してください。
     - request_id: レスポンスデータのkeyとして用いられます。設定しなかった場合は、prompt_nameがkeyとなります。
     - variables_dict: プロンプトに{関数名}で囲まれた関数がある場合、辞書配列を入力することでプロンプト内の{}を設定した文字列に書き換えます。
-    - stream_mode: Stream問合せを実行するかBoolで設定します。
+        - "user_assistant_prompt": { "user": "こんにちわ!みらい"}
+        - "variables": {"question":"human"}
+    - stream_mode: Stream問合せを実行するかBoolで設定します。Stream時は、"/openai/get-chunk/"にて値を取得できます。
     """
     if request_id == None:
         request_id = prompt_name
@@ -163,13 +167,24 @@ def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_i
 
 @app.get("/openai/get/", tags=["OpenAI"])
 async def openai_get(reset: bool =False):
+    """
+    OpenAI APIの結果を取得します。OpenAI_requestで追加したタスクの結果を取得します。
+
+    **パラメータ:**
+    - reset: 関数を初期化します
+    """
     return_data=LLM_request.chat_completion_object
     if reset:
         LLM_request.chat_completion_object=[]
     return return_data
 
 @app.get("/openai/get-chunk/", tags=["OpenAI"])
-async def openai_get(reset: bool =False):
+async def openai_get_stream(reset: bool =False):
+    """
+    OpenAI APIの結果を取得します。OpenAI_request Stream Trueにて設定した場合に断片を取得できます。
+    **パラメータ:**
+    - reset: 関数を初期化します
+    """
     return_data=LLM_request.chat_completion_chank_object
     if reset:
         LLM_request.chat_completion_chank_object=[]
