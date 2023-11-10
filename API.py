@@ -8,15 +8,15 @@ from datetime import datetime,date
 from aiohttp import ClientSession
 import os, json, shutil, re, csv
 import asyncio
-import time
 import openai
 import tiktoken
+from openai import AsyncOpenAI,OpenAI
 
 app = FastAPI(title='GPT Manger API',version='β2.0')
 
 class config:
     prompts_folder_path = "data"
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    
 
 class LLM_request:
     chat_completion_object:List[Any]=[]
@@ -44,16 +44,10 @@ class variables_dict(BaseModel):
     user_assistant_prompt: dict = {}
     variables: dict = {}
 
-@app.on_event("startup")
-async def startup_event():
-    # アプリ起動時にセッションを設定
-    openai.aiosession.set(ClientSession())
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    # アプリ終了時にセッションを閉じる
-    print("Finished OpenAI aiosession")
-    await openai.aiosession.get().close()
+class openai_config:
+    #openai.api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    aclient = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 @app.post("/prompts-post/add_edit_prompt", tags=["Prompts"])
 def add_new_prompt(prompt: Prompts):
@@ -70,6 +64,40 @@ def add_new_prompt(prompt: Prompts):
 
 @app.get("/prompts-get/get_prompt_metadata", tags=["Prompts"])
 def get_all_prompts_data():
+    """
+    すべてのプロンプトデータを取得します。
+
+    **取得データ例:**
+    ```json
+    [{
+    "title": "",
+    "description": "",
+    "text": {
+      "system": ""
+    },
+    "setting": {
+      "model": "gpt-3.5-turbo",
+      "temperature": 1,
+      "top_p": 1,
+      "max_tokens": 256,
+      "presence_penalty": 0,
+      "frequency_penalty": 1
+    },
+    "variables": {
+      "character": "",
+      "loc_time": "",
+      "status": ""
+    },
+    "history": [],
+    "other": {
+      "translate_text": {
+        "system": ""
+      }
+    }
+    }]
+    ```
+
+    """
     result = get_prompts_list()
     return result
 
@@ -412,14 +440,23 @@ def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
         'presence_penalty':prompt_list['setting']['frequency_penalty'],
         'add_responce_dict':{'variables':variables,'prompt':request_text}
     }
+    try:
+        responce_format = prompt_list['setting']['response_format']
+        request_kwargs['response_format'] = responce_format
+    except KeyError:
+        request_kwargs['response_format'] = None
     return request_kwargs
 
 def talknizer(texts):
         tokens = tiktoken.get_encoding('gpt2').encode(texts)
         return len(tokens)
 
-async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
-    
+async def create_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
+    #https://github.com/openai/openai-python/blob/main/README.md
+    import time
+    process_time=time.time()
+    asyclient=openai_config.aclient
+    client=openai_config.client
     Prompts=[]
     for original_dict in Prompt:
         transformed_dict = {}
@@ -430,49 +467,56 @@ async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You a
     
     gpt_error_mapping = GPT_error_list()
     retry_count = 0
-    result_content = ""
+    
+
+    gpt_functions = {
+        'model':model,
+        'messages':Prompts,
+        'temperature':temp,
+        'max_tokens':tokens_max,
+        'top_p':top_p,
+        'frequency_penalty':frequency_penalty,
+        'presence_penalty':presence_penalty,
+        'stream':stream_mode,
+    }
+    if response_format != None:
+        gpt_functions['response_format']=response_format
+    
     while retry_count < max_retries:
         try:
             # 非同期でチャットの応答を取得
-            chat_completion_resp = await openai.ChatCompletion.acreate(
-                model=model,
-                messages=Prompts,
-                temperature=temp,
-                max_tokens=tokens_max,
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
-                stream=stream_mode
-            )
-
             if stream_mode:
+                #Stream モード 未対応
                 fin_reason = None
-                async for chunk in chat_completion_resp:
-                    content = chunk["choices"][0].get("delta", {}).get("content", "")
-                    fin_reason = chunk["choices"][0].get("finish_reason")
+                result_content = ""
+                chat_completion_resp = client.chat.completions.create(**gpt_functions)
+                for event in chat_completion_resp:
+                    event_dict = event.dict()
+                    if event_dict['choices'][0]['delta']['content'] != None:
+                        content = event_dict['choices'][0]['delta']['content']
+                    else:
+                        content = ""
                     print(content,end='')
                     result_content += content
+                    fin_reason = event_dict['choices'][0]['finish_reason']
                     LLM_request.chat_completion_chank_object.append({"request_id":request_id,
-                                                                        'id':chunk["id"],
+                                                                        'id':event_dict["id"],
                                                                         "message": content,
-                                                                        "index": chunk["choices"][0].get("index"),
-                                                                        'object':chunk["object"],
-                                                                        'object':chunk["object"],
-                                                                        'created':chunk["created"],
-                                                                        'model':chunk["model"],
+                                                                        "index": event_dict['choices'][0]['index'],
+                                                                        'object': event_dict['choices'],
+                                                                        'created':event_dict['created'],
+                                                                        'model':event_dict["model"],
                                                                         "finish_reason": fin_reason})
-                    
                     await asyncio.sleep(0)
-                print(f"\nFin Reason: {fin_reason}")
                 prompt_tokens=talknizer(''.join([item['content'] for item in Prompts]))
                 completion_tokens=talknizer(result_content)
                 chat_completion_resp = {
-                    "id": chunk["id"],
-                    "object": chunk["object"],
-                    "created": chunk["created"],
-                    "model": chunk["model"],
+                    "id": event_dict["id"],
+                    "object": event_dict["object"],
+                    "created": event_dict["created"],
+                    "model": event_dict["model"],
                     "choices": [{
-                        "index": chunk["choices"][0].get("index"),
+                        "index": event_dict["choices"][0].get("index"),
                         "message": {
                         "role": "assistant",
                         "content": result_content,
@@ -484,7 +528,14 @@ async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You a
                         "completion_tokens": completion_tokens,
                         "total_tokens": prompt_tokens+completion_tokens
                     }}
-
+                
+            else:
+                # 通常モード
+                chat_completion_resp = await asyclient.chat.completions.create(**gpt_functions)
+                chat_completion_resp = chat_completion_resp.dict()
+                fin_reason = chat_completion_resp['choices'][0]['finish_reason']
+                print(chat_completion_resp['choices'][0]['message']['content'])
+            
             # 辞書配列に結果を格納
             chat_completion_resp.update({'request_id':request_id,'ok':True})
             if add_responce_dict != None:
@@ -496,35 +547,118 @@ async def create_chat_completion(request_id,prompt_name,Prompt=[{"system":"You a
             #データロギング
             Create_or_add_json_data(prompt_name,history=chat_completion_resp)
             log_gpt_query_to_csv(prompt_name,model,chat_completion_resp["usage"]['prompt_tokens'],chat_completion_resp["usage"]['completion_tokens'],chat_completion_resp["usage"]['total_tokens'])
+            print(f"\n\nGPT Request Time: {time.time()-process_time}\nFin Reason: {fin_reason}")
             return
         except Exception as e:
             retry_count+=1
-            title, message, action = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit'))
-            print(e)
-            e=str(e)+(f"\nmessages: {Prompts}\ntemperature: {temp}\nMax Tokens: {tokens_max}\ntop_p: {top_p}\nfrequency_penalty: {frequency_penalty}\npresence_penalty: {presence_penalty}")
+            title, message, action, time = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit',1))
+            error_log = ''
+            for key,value in gpt_functions.items():
+                error_log += f"{key} : {value}\n"
+            e=f"{e}\n\n{error_log}"
             error(title, message, e if action == 'exit' else None)
             
             if action == 'exit':
                 LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':e})
                 return
             elif action == 'sleep':
-                await asyncio.sleep(1)
-
+                await asyncio.sleep(time)
+    # リクエストID 結果を追加
     LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':'Request Time out'})
     return 
 
 def GPT_error_list():
     gpt_error_mapping = {
-        openai.error.APIError: ("OpenAI API Error", "しばらく時間をおいてからリクエストを再試行し、問題が解決しない場合は弊社までご連絡ください。", 'sleep'),
-        openai.error.Timeout: ("OpenAI Timeout Error", "リクエストがタイムアウトしました。しばらく時間をおいてからリクエストを再試行し、問題が解決しない場合は弊社までご連絡ください。", 'sleep'),
-        openai.error.RateLimitError: ("OpenAI Rate Limit Error", "リクエストのペースを上げてください。詳しくはレート制限ガイドをご覧ください。", 'exit'),
-        openai.error.APIConnectionError: ("OpenAI API Connection Error", "ネットワーク設定、プロキシ設定、SSL証明書、またはファイアウォールルールを確認してください。", 'exit'),
-        openai.error.InvalidRequestError: ("OpenAI API Invalid Request Error", "エラーメッセージは、具体的なエラーについてアドバイスするはずです。呼び出している特定のAPIメソッドのドキュメントを確認し、有効で完全なパラメータを送信していることを確認してください。また、リクエストデータのエンコーディング、フォーマット、サイズを確認する必要があるかもしれません。", 'exit'),
-        openai.error.AuthenticationError: ("OpenAI Authentication Error", "APIキーまたはトークンを確認し、それが正しく、アクティブであることを確認してください。アカウントダッシュボードから新しいものを生成する必要があるかもしれません。", 'exit'),
-        openai.error.ServiceUnavailableError: ("OpenAI Service Unavailable Error", "しばらく時間をおいてからリクエストを再試行し、問題が解決しない場合はお問い合わせください。ステータスページをご確認ください。", 'sleep')
+        openai.ConflictError:("OpenAI Conflict Error", """エラー内容:
+                             openai.ConflictError は、APIがリクエストを処理できないことを示しています。これは、以下のような状況で発生する可能性があります：
+                             リソースに対する変更が既に進行中で、新しいリクエストが競合している。
+                             同じデータやリソースに対して一貫性のない変更を同時に行おうとした。
+                             特定の操作が許可されていない状態でリクエストされた。
+                             対応方法:
+                             クエストの再試行: エラーが一時的な競合によるものであれば、リクエストを遅らせて再試行することが有効です。
+                             同期の確認: 複数のプロセスまたはスレッドが同じリソースにアクセスしている場合は、適切な同期メカニズムを実装して競合を回避します。
+                             リクエストの確認: 送信しているリクエストが正しいか確認し、競合を引き起こす可能性のあるリクエストがないか再検討します。
+                             APIドキュメントの確認: ConflictError が発生した具体的なAPIエンドポイントのドキュメントを確認し、エラーの原因となっている競合条件について理解します。
+                             エラーメッセージの詳細: エラーレスポンスに含まれる追加情報やメッセージを検証して、エラーの原因を特定します。""", 'sleep',3),
+        openai.NotFoundError:("OpenAI NotFound Error", """エラー内容:
+                             このエラーは、リクエストされたリソースが見つからない場合に発生します。たとえば、存在しないモデルやファイルを指定したリクエスト、またはIDが間違っているか削除されたオブジェクトに対するリクエストで遭遇する可能性があります。
+                             対応方法:
+                             リソースの確認: 指定したリソースのIDや名前が正しいことを確認してください。
+                             削除の確認: リソースが削除されていないか、APIの変更履歴を確認してください。
+                             URLの確認: エンドポイントのURLが正しいことを確認してください。
+                             """, 'exit',1),
+        openai.APIStatusError:("OpenAI APIStatus Error", """エラー内容:
+                              APIサービス自体に問題が発生している場合、このエラーが返されます。サービスのダウンタイムや一時的な障害が原因である可能性があります。
+                              対応方法:
+                              ステータスチェック: OpenAIのステータスページを確認して、サービスの状態を確認してください。
+                              再試行ポリシー: エラーが一時的である可能性があるため、時間を置いてから再試行してください。
+                              サポートに連絡: 問題が継続する場合は、OpenAIのサポートに連絡することを検討してください。
+                              """, 'sleep',3),
+        openai.RateLimitError:("OpenAI Rate Limit Error", """エラー内容:
+                              このエラーは、APIの利用制限を超えた場合に発生します。これはリクエスト数が短時間に多すぎるか、アカウントに設定されている使用量の上限に達したことを意味します。
+                              対応方法:
+                              利用状況の確認: 自分のAPI利用状況を確認して、レート制限の上限に達しているか確認してください。
+                              リクエストの制限: リクエストの頻度を減らすか、必要に応じてレート制限を増やすようにリクエストしてください。
+                              分散実行: リクエストを時間をかけて分散させ、レート制限に達しないようにしてください。
+                              これらのエラーは、APIを使用する上でよく遭遇するものであり、それぞれに対する適切な対応が必要です。ユーザーはこれらの対応策を試して問題を解決できる可能性が高いですが、問題が解決しない場合はOpenAIのサポートチームに連絡することをお勧めします。
+                              """, 'sleep',5),
+        openai.APITimeoutError:("OpenAI API Timeout Error", """エラー内容:
+                               APITimeoutErrorはAPIリクエストが指定されたタイムアウト期間内に完了しなかった場合に発生します。これは、OpenAIのサーバーが過負荷になっているか、ネットワーク接続が遅延している場合に起こりえます。
+                               対応方法:
+                               再試行: ネットワークの一時的な問題やサーバーの負荷が原因の場合、時間を置いてから再試行してください。
+                               タイムアウトの延長: リクエストに対するタイムアウト設定を長くしてみてください。
+                               ネットワークの確認: ネットワーク接続が安定していることを確認してください。""", 'sleep',1),
+        openai.BadRequestError:("OpenAI Bad Request Error", """エラー内容:
+                               BadRequestErrorは、APIへのリクエストが不正または不適切なフォーマットであるためにサーバーによって拒否された場合に発生します。これには、パラメータの誤り、不足、またはデータのフォーマットが不正な場合などが含まれます。
+                               対応方法:
+                               リクエストの検証: 送信したリクエストのパラメータとフォーマットが正しいかどうかを検証してください。
+                               エラーメッセージの確認: エラーメッセージには、通常、何が問題であるかの手がかりが含まれています。メッセージの内容を注意深く読んで、指示に従ってください。
+                               ドキュメントの確認: OpenAIのドキュメントを確認して、適切なリクエストフォーマットを確認してください。""", 'exit',1),
+        openai.APIConnectionError:("OpenAI API Connection Error", """エラー内容:
+                                  APIConnectionError は、APIへの接続を確立する際に何らかの問題が発生した場合に返されます。これは、ネットワーク障害、DNSの問題、またはOpenAIのサービスに到達できないことが原因である可能性があります。
+                                  対応方法:
+                                  ネットワークのトラブルシューティング: インターネット接続が正常に機能していることを確認し、必要に応じて修正してください。
+                                  ファイアウォールの確認: ファイアウォールやセキュリティソフトウェアがOpenAIのAPIとの通信を妨げていないか確認してください。
+                                  DNSの確認: DNS設定が正しいことを確認し、DNSキャッシュをクリアしてみてください。""", 'sleep',1),
+        openai.AuthenticationError:("OpenAI Authentication Error", """エラー内容:
+                                   AuthenticationError は、APIキーが無効、期限切れ、または不足している場合に発生します。これは、APIに対する認証が失敗したことを意味します。
+                                   対応方法:
+                                   APIキーの確認: 有効なAPIキーが使用されているか確認してください。
+                                   期限の確認: APIキーの期限が切れていないか確認してください。
+                                   キーの設定: APIキーがリクエストに正しく含まれていることを確認してください。""", 'exit',1),
+        openai.InternalServerError:("OpenAI Internal Server Error", """エラー内容:
+                                   InternalServerError は、OpenAIのサーバー内部でエラーが発生した場合に返されます。このエラーはクライアント側ではなく、サーバー側の問題を示しています。
+                                   対応方法:
+                                   再試行: 一時的なサーバーの問題が原因の場合は、時間を置いてからリクエストを再試行してください。
+                                   ステータスチェック: OpenAIのステータスページを確認して、他に既知の問題がないか確認してください。
+                                   サポートへの問い合わせ: 問題が継続する場合は、OpenAIサポートに報告してください。""", 'sleep',1),
+        openai.PermissionDeniedError:("OpenAI Permission Denied Error", """エラー内容:
+                                     PermissionDeniedError は、リクエストされた操作に対する適切なアクセス権がない場合に発生します。これは、リクエストが認証されたものの、実行しようとした操作に必要な権限がアカウントにないことを意味します。
+                                     対応方法:
+                                     権限の確認: アカウントに必要な権限があるか確認してください。
+                                     ロールの確認: 適切なロールやアクセス権がアカウントに割り当てられているか確認してください。
+                                     アクセスポリシーの確認: アカウントのアクセスポリシーがリクエストされた操作を許可していることを確認してください。""", 'exit',1),
+        openai.UnprocessableEntityError:("OpenAI Unprocessable Entity Error", """エラー内容:
+                                        UnprocessableEntityError は、リクエストが正しい形式で送信されたが、何らかの理由で処理できなかった場合に返されます。これは、リクエストの内容が無効であるか、リクエストに含まれるデータがサーバーの期待する形式と一致していないことを意味します。
+                                        対応方法:
+                                        リクエストのレビュー: リクエストがAPIの仕様に合致しているか確認してください。
+                                        バリデーションエラーの詳細: エラーメッセージには、通常、リクエストが受け入れられなかった具体的な理由が含まれています。
+                                        ドキュメントの確認: OpenAIのドキュメントを確認し、リクエストの形式が正しいかどうかを再確認してください。""", 'exit',1),
+        openai.APIResponseValidationError:("OpenAI APIResponse Validation Error", """エラー内容:
+                                          APIResponseValidationError は、APIからのレスポンスが期待するスキーマや形式と一致しない場合に発生するエラーです。これは、APIが無効なデータを返しているか、クライアント側のレスポンス処理が適切に構成されていないことを示しています。
+                                          対応方法:
+                                          レスポンスの確認: 受け取ったレスポンスデータを確認し、期待される形式に沿っているか検証してください。
+                                          クライアントのアップデート: クライアントライブラリが最新か確認し、古い場合は更新してください。
+                                          サポートへの報告: このエラーはAPI側の問題である可能性があるため、OpenAIに問題を報告することも検討してください。""", 'exit',1),
+        openai._AmbiguousModuleClientUsageError:("OpenAI _Ambiguous Module Client Usage Error", """エラー内容:
+                                                _AmbiguousModuleClientUsageError は、OpenAIライブラリ内でのクライアントの使用が不明確な場合に発生する内部エラーです。これは主に、APIの異なるバージョン間で混同が発生したり、ライブラリの使用方法が不適切である場合に発生する可能性があります。
+                                                対応方法:
+                                                方法の確認: OpenAIライブラリの使用方法を見直し、ガイドに沿っているか確認してください。
+                                                クライアントの初期化: クライアントの初期化が適切に行われているか、ドキュメントと照らし合わせて確認してください。
+                                                コードのリファクタリング: 必要に応じてコードをリファクタリングし、クライアントの使用方法を明確にしてください。""", 'exit',1),
     }
     return gpt_error_mapping
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("API:app", host="0.0.0.0", port=8000,reload=True)
