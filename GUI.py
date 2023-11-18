@@ -5,7 +5,7 @@ import time
 import ast
 import json
 
-LLM_model_name=["gpt-3.5-turbo", "gpt-4"]
+LLM_model_name=["gpt-3.5-turbo", "gpt-4","gpt-4-1106-preview"]
 BASE_URL = "http://127.0.0.1:8000"
 
 Deepl_API_key = os.getenv("DEEPL_API_KEY")
@@ -48,21 +48,18 @@ def edit_prompt_from_api(send_data,object):
 def submit_openai(prompt_name,prompt,variables,object):
     print(f"data:  {variables}")
     json_data= {
-        "user_assistant_prompt": prompt,
             "variables": variables
             }
     json_data= json.dumps(json_data, indent=4)
-    response = requests.post(f"{BASE_URL}/request/openai-post/{prompt_name}?stream=false", json_data)
-    
-    if response.status_code!=200:
-        error = object.warning(f"Error: {response}")
-        response = None
-    else:
-        success = object.success(f"Submittied!!")
+    response = requests.post(f"{BASE_URL}/openai/request/?prompt_name={prompt_name}&stream_mode=false", json_data)
+
+    if response['ok']== True:
+        success = object.info(f"GPT Request Done.")
         time.sleep(1)
         success.empty()
-        response=response.json()
-    return response
+    else:
+        error = object.warning(f"Error: {response}")
+        response = None
 
 def show_sidebar_buttons(data):
     def apply_css():
@@ -213,9 +210,7 @@ def display_selected_item_details():
 
     if submit_buttion_clicked:
         submit_info.info('Connecting to the server. Please wait...')
-        result = submit_openai(title,[],variables_data,submit_info)
-        if result !=None:
-            submit_result.text_area(label="Result", value=result,height=result.count('\n')*50)
+        submit_openai(title,[],variables_data,submit_info)
 
 def display_prompt_text(text_dict):
     text_box_value_dict = {}
