@@ -507,7 +507,6 @@ async def create_chat_completion(request_id,prompt_name,response_format={},Promp
                                                                         'created':event_dict['created'],
                                                                         'model':event_dict["model"],
                                                                         "finish_reason": fin_reason})
-                    await asyncio.sleep(0)
                 prompt_tokens=talknizer(''.join([item['content'] for item in Prompts]))
                 completion_tokens=talknizer(result_content)
                 chat_completion_resp = {
