@@ -134,6 +134,7 @@ def get_all_prompts_names():
 @app.get("/prompts-get/lookup_prompt_by_name", tags=["Prompts"])
 def get_prompt_data_by_name(prompt_name: str):
     result = get_prompts_list(prompt_name)
+    del result["history"]
     return result
 
 @app.get("/prompts-get/history/", tags=["Prompts"])
@@ -406,6 +407,12 @@ def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
 
     request_text = []
     prompt_list['text'].update(user_prompts)
+    
+    #variablesに既存値を代入
+    for key in prompt_list['variables']:
+        if key not in variables:
+            variables[key] = prompt_list['variables'][key]
+
     for key, value in prompt_list['text'].items():
         if isinstance(value, str):
             # 文字列内のプレースホルダー（{xxx}）を見つける
@@ -427,6 +434,7 @@ def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
         else:
             error("GPT Request Error","prompt text format error.",prompt_list['text'])
             return{"ok":False,"message":f"prompt text format error. /{key}:{value}"}
+    #print(f"request_text: {request_text}")
     
     request_kwargs = {
         'request_id':request_id,
@@ -480,7 +488,7 @@ async def create_chat_completion(request_id,prompt_name,response_format={},Promp
         'stream':stream_mode,
     }
     if response_format != None:
-        gpt_functions['response_format']=response_format
+        gpt_functions['response_format']={"type":response_format}
     
     while retry_count < max_retries:
         try:
