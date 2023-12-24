@@ -256,7 +256,7 @@ async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,r
             return kwargs
     return{'ok':True,'message':'LLM Request sent in the background'}
 
-@app.get("/LLM/get/", tags=["LLM"])
+@app.get("/LLM/get/", tags=["LLM"] ,summary='LLMリクエスト結果を取得する')
 async def LLM_Chat_get(reset: bool =False):
     """
     LLMの結果を取得します。LLMで追加したタスクの結果を取得します。
