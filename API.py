@@ -11,13 +11,14 @@ import asyncio
 import openai
 import tiktoken
 from openai import AsyncOpenAI,OpenAI
+import google.generativeai as genai
+from vertexai.generative_models._generative_models import HarmCategory, HarmBlockThreshold, ResponseBlockedError
 
 app = FastAPI(title='GPT Manger API',version='β2.0')
 
 class config:
     prompts_folder_path = "data"
     
-
 class LLM_request:
     chat_completion_object:List[Any]=[]
     chat_completion_chank_object:List[Any]=[]
@@ -48,6 +49,22 @@ class openai_config:
     #openai.api_key = os.getenv("OPENAI_API_KEY")
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     aclient = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+class gemini_config:
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+    safety_settings = {
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    }
+    # https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini?hl=ja
+    config = {
+        "max_output_tokens": 2048,
+        "temperature": 0.9,
+        "top_p": 1
+    }
 
 @app.post("/prompts-post/add_edit_prompt", tags=["Prompts"])
 def add_new_prompt(prompt: Prompts):
@@ -182,13 +199,12 @@ def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_i
     """
     if request_id == None:
         request_id = prompt_name
-    kwargs = GPT_request_API(prompt_name=prompt_name,
+    kwargs = LLM_request_API(prompt_name=prompt_name,
                                request_id=request_id,
                                user_prompts= value.user_assistant_prompt,
                                variables=value.variables)
     kwargs['stream_mode']=stream_mode
-    
-    background_tasks.add_task(create_chat_completion,**kwargs)
+    background_tasks.add_task(create_gpt_chat_completion,**kwargs)
     if 'ok' in kwargs.keys():
         if kwargs['ok'] != True:
             return kwargs
@@ -217,6 +233,40 @@ async def openai_get_stream(reset: bool =False):
     return_data=LLM_request.chat_completion_chank_object
     if reset:
         LLM_request.chat_completion_chank_object=[]
+    return return_data
+
+@app.post("/LLM/request/",tags=["LLM"],summary="LLMモデルにリクエストを送る")
+async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
+
+    if request_id == None:
+        request_id = prompt_name
+    kwargs = LLM_request_API(prompt_name=prompt_name,
+                               request_id=request_id,
+                               user_prompts= value.user_assistant_prompt,
+                               variables=value.variables)
+    kwargs['stream_mode'] = stream_mode
+    print(kwargs)
+    model_name = kwargs['model'] 
+    if "gpt" in model_name:
+        background_tasks.add_task(create_gpt_chat_completion,**kwargs)
+    elif model_name=="gemini-pro":
+        pass
+    if 'ok' in kwargs.keys():
+        if kwargs['ok'] != True:
+            return kwargs
+    return{'ok':True,'message':'LLM Request sent in the background'}
+
+@app.get("/LLM/get/", tags=["LLM"])
+async def LLM_Chat_get(reset: bool =False):
+    """
+    LLMの結果を取得します。LLMで追加したタスクの結果を取得します。
+
+    **パラメータ:**
+    - reset: 関数を初期化します
+    """
+    return_data=LLM_request.chat_completion_object
+    if reset:
+        LLM_request.chat_completion_object=[]
     return return_data
 
 # GPTのクエリをCSVに保存する関数
@@ -386,9 +436,9 @@ def Create_or_add_json_data(title, description=None, prompt_text=None, settings=
         json.dump(json_data, json_file, indent=4,ensure_ascii=False)
 
 # GPTに問い合わせを実施する関数
-def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
+def LLM_request_API(prompt_name,request_id, user_prompts={}, variables={}):
     """
-    GPT APIへの問い合わせを行い、返ってきたレスポンスを処理します。
+    LLM APIへの問い合わせに必要な情報を返します
     
     Parameters:
     - name: 問い合わせに使用するJSONファイルの名前
@@ -396,7 +446,7 @@ def GPT_request_API(prompt_name,request_id, user_prompts={}, variables={}):
     - variables: プレースホルダーを置き換えるためのキーと値のマッピング (省略可能)
 
     Returns:
-    GPTからのレスポンスの内容
+    各モデルに基づいたLLM API問合せに必要なデータを返します。
     """
     #jsonデータの検索
     prompt_list = get_prompts_list(prompt_name)
@@ -459,7 +509,7 @@ def talknizer(texts):
         tokens = tiktoken.get_encoding('gpt2').encode(texts)
         return len(tokens)
 
-async def create_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
+async def create_gpt_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
     #https://github.com/openai/openai-python/blob/main/README.md
     import time
     process_time=time.time()
@@ -494,7 +544,6 @@ async def create_chat_completion(request_id,prompt_name,response_format={},Promp
         try:
             # 非同期でチャットの応答を取得
             if stream_mode:
-                #Stream モード 未対応
                 fin_reason = None
                 result_content = ""
                 chat_completion_resp = client.chat.completions.create(**gpt_functions)
