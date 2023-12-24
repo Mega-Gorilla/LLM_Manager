@@ -183,7 +183,7 @@ def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
     print(f"{day}: {model_summary}")
     return {"day": str(day), "model_summary": model_summary}
 
-@app.post("/openai/request/", tags=["OpenAI"])
+@app.post("/openai/request/", tags=["OpenAI"],summary="廃止予定")
 def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
     """
     OpenAI APIにリクエストします。
@@ -209,7 +209,7 @@ def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_i
             return kwargs
     return{'ok':True,'message':'GPT Request sent in the background'}
 
-@app.get("/openai/get/", tags=["OpenAI"])
+@app.get("/openai/get/", tags=["OpenAI"],summary="廃止予定")
 async def openai_get(reset: bool =False):
     """
     OpenAI APIの結果を取得します。OpenAI_requestで追加したタスクの結果を取得します。
@@ -222,7 +222,7 @@ async def openai_get(reset: bool =False):
         LLM_request.chat_completion_object=[]
     return return_data
 
-@app.get("/openai/get-chunk/", tags=["OpenAI"])
+@app.get("/openai/get-chunk/", tags=["OpenAI"],summary="廃止予定")
 async def openai_get_stream(reset: bool =False):
     """
     OpenAI APIの結果を取得します。OpenAI_request Stream Trueにて設定した場合に断片を取得できます。
@@ -236,6 +236,17 @@ async def openai_get_stream(reset: bool =False):
 
 @app.post("/LLM/request/",tags=["LLM"],summary="LLMモデルにリクエストを送る")
 async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
+    """
+    LLMチャットモデルにリクエストします。
+    
+    **パラメータ:**
+    - prompt_name: プロンプト名を設定してください。プロンプト名のJsonファイルからPromptの主要な情報は読み込まれます。
+    - request_id: レスポンスデータのkeyとして用いられます。設定しなかった場合は、prompt_nameがkeyとなります。
+    - variables_dict: プロンプトに{関数名}で囲まれた関数がある場合、辞書配列を入力することでプロンプト内の{}を設定した文字列に書き換えます。
+        - "user_assistant_prompt": { "user": "こんにちわ!みらい"}
+        - "variables": {"question":"human"}
+    - stream_mode: Stream問合せを実行するかBoolで設定します。Stream時は、"/openai/get-chunk/"にて値を取得できます。
+    """
 
     if request_id == None:
         request_id = prompt_name
@@ -245,16 +256,12 @@ async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,r
                                variables=value.variables)
     kwargs['stream_mode'] = stream_mode
     print(kwargs)
-    model_name = kwargs['model'] 
-    if "gpt" in model_name:
-        background_tasks.add_task(create_LLM_chat_completion,**kwargs)
-    elif "gemini" in model_name:
-        model = genai.GenerativeModel(model_name=model_name)
-        chat = model.start_chat()
-        background_tasks.add_task()
     if 'ok' in kwargs.keys():
         if kwargs['ok'] != True:
-            return kwargs
+            return kwargs #プロンプト取得時に問題が発生した場合
+    
+    background_tasks.add_task(create_LLM_chat_completion,**kwargs)
+
     return{'ok':True,'message':'LLM Request sent in the background'}
 
 @app.get("/LLM/get/", tags=["LLM"] ,summary='LLMリクエスト結果を取得する')
