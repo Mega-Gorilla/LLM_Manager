@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from pydantic.json import pydantic_encoder
 from typing import List,Any
 from datetime import datetime,date
-import os, json, shutil, re, csv
+import os, json, shutil, re, csv, time
 import asyncio
 import openai
 import tiktoken
@@ -50,13 +50,20 @@ class openai_config:
 
 class gemini_config:
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
     # https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini?hl=ja
+
     config = {
         "max_output_tokens": 2048,
         "temperature": 1,
         "top_p": 1
     }
+
+    safety_settings_NONE=[
+        { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
+        { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
+        { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
+        { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+    ]
 
 @app.post("/prompts-post/add_edit_prompt", tags=["Prompts"])
 def add_new_prompt(prompt: Prompts):
@@ -196,7 +203,7 @@ def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_i
                                user_prompts= value.user_assistant_prompt,
                                variables=value.variables)
     kwargs['stream_mode']=stream_mode
-    background_tasks.add_task(create_gpt_chat_completion,**kwargs)
+    background_tasks.add_task(create_LLM_chat_completion,**kwargs)
     if 'ok' in kwargs.keys():
         if kwargs['ok'] != True:
             return kwargs
@@ -240,9 +247,11 @@ async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,r
     print(kwargs)
     model_name = kwargs['model'] 
     if "gpt" in model_name:
-        background_tasks.add_task(create_gpt_chat_completion,**kwargs)
-    elif model_name=="gemini-pro":
-        pass
+        background_tasks.add_task(create_LLM_chat_completion,**kwargs)
+    elif "gemini" in model_name:
+        model = genai.GenerativeModel(model_name=model_name)
+        chat = model.start_chat()
+        background_tasks.add_task()
     if 'ok' in kwargs.keys():
         if kwargs['ok'] != True:
             return kwargs
@@ -497,13 +506,11 @@ def LLM_request_API(prompt_name,request_id, user_prompts={}, variables={}):
         request_kwargs['response_format'] = None
     return request_kwargs
 
-def talknizer(texts):
+def gpt_talknizer(texts):
         tokens = tiktoken.get_encoding('gpt2').encode(texts)
         return len(tokens)
 
-async def create_gpt_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
-    #https://github.com/openai/openai-python/blob/main/README.md
-    import time
+async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,tokens_max,top_p,frequency_penalty,presence_penalty,stream_mode,response_format,max_retries,add_responce_dict):
     process_time=time.time()
     asyclient=openai_config.aclient
     client=openai_config.client
@@ -514,10 +521,8 @@ async def create_gpt_chat_completion(request_id,prompt_name,response_format={},P
             transformed_dict["role"] = key
             transformed_dict["content"] = value
         Prompts.append(transformed_dict)
-    
     gpt_error_mapping = GPT_error_list()
     retry_count = 0
-    
 
     gpt_functions = {
         'model':model,
@@ -529,12 +534,14 @@ async def create_gpt_chat_completion(request_id,prompt_name,response_format={},P
         'presence_penalty':presence_penalty,
         'stream':stream_mode,
     }
+
     if response_format != None:
+        # json Mode等
         gpt_functions['response_format']={"type":response_format}
-    
+
     while retry_count < max_retries:
         try:
-            # 非同期でチャットの応答を取得
+            # Stream
             if stream_mode:
                 fin_reason = None
                 result_content = ""
@@ -556,8 +563,8 @@ async def create_gpt_chat_completion(request_id,prompt_name,response_format={},P
                                                                         'created':event_dict['created'],
                                                                         'model':event_dict["model"],
                                                                         "finish_reason": fin_reason})
-                prompt_tokens=talknizer(''.join([item['content'] for item in Prompts]))
-                completion_tokens=talknizer(result_content)
+                prompt_tokens=gpt_talknizer(''.join([item['content'] for item in Prompts]))
+                completion_tokens=gpt_talknizer(result_content)
                 chat_completion_resp = {
                     "id": event_dict["id"],
                     "object": event_dict["object"],
@@ -588,18 +595,18 @@ async def create_gpt_chat_completion(request_id,prompt_name,response_format={},P
             chat_completion_resp.update({'request_id':request_id,'ok':True})
             if add_responce_dict != None:
                 chat_completion_resp.update(add_responce_dict)
+            #実行時間を記録
+            GPT_process_time = time.time()-process_time
+            chat_completion_resp.update({"process_time":GPT_process_time})
+            print(f"\n\nGPT Request Time: {GPT_process_time}\nFin Reason: {fin_reason}")
 
             #応答を配列に追加
-            LLM_request.chat_completion_object.append(chat_completion_resp)
-
-            #データロギング
-            Create_or_add_json_data(prompt_name,history=chat_completion_resp)
-            log_gpt_query_to_csv(prompt_name,model,chat_completion_resp["usage"]['prompt_tokens'],chat_completion_resp["usage"]['completion_tokens'],chat_completion_resp["usage"]['total_tokens'])
-            print(f"\n\nGPT Request Time: {time.time()-process_time}\nFin Reason: {fin_reason}")
-            return
+            return chat_completion_resp
+        
         except Exception as e:
+            #レスポンスエラー時
             retry_count+=1
-            title, message, action, time = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit',1))
+            title, message, action, sleep_time = gpt_error_mapping.get(type(e), ("OpenAI Unknown Error", "不明なエラーです。", 'exit',1))
             error_log = ''
             for key,value in gpt_functions.items():
                 error_log += f"{key} : {value}\n"
@@ -607,12 +614,32 @@ async def create_gpt_chat_completion(request_id,prompt_name,response_format={},P
             error(title, message, e if action == 'exit' else None)
             
             if action == 'exit':
-                LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':e})
-                return
+                return {'request_id':request_id,'ok':False,'message':e} #エラーで終了した場合
             elif action == 'sleep':
-                await asyncio.sleep(time)
+                await asyncio.sleep(sleep_time)
+
     # リクエストID 結果を追加
-    LLM_request.chat_completion_object.append({'request_id':request_id,'ok':False,'message':'Request Time out'})
+    return {'request_id':request_id,'ok':False,'message':'Request Time out'} #3回問い合わせてレスポンスが返ってこなかった場合
+
+async def create_LLM_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
+    #https://github.com/openai/openai-python/blob/main/README.md
+    result_data = {}
+    if "gpt" in model:
+        responce = await create_GPT_chat_completion(request_id=request_id,prompt_name=prompt_name,Prompt=Prompt,model=model,temp=temp,tokens_max=tokens_max,top_p=top_p,frequency_penalty=frequency_penalty,presence_penalty=presence_penalty,stream_mode=stream_mode,response_format=response_format,max_retries=max_retries,add_responce_dict=add_responce_dict)
+        result_data.update({"request_id":request_id,
+                            "ok":responce['ok'],
+                            "model":model,
+                            "content":responce['choices'][0]['message']['content'],
+                            "finish_reason":responce['choices'][0]['finish_reason'],
+                            "completion_tokens":responce['usage']['completion_tokens'],
+                            'prompt_tokens':responce['usage']['prompt_tokens'],
+                            'total_tokens':responce['usage']['total_tokens'],
+                            'raw_data':responce})
+    elif "gemini" in model:
+        model = genai.GenerativeModel(model_name=model)
+        chat = model.start_chat()
+
+    LLM_request.chat_completion_object.append(result_data)
     return 
 
 def GPT_error_list():
