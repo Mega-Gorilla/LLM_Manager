@@ -5,14 +5,12 @@ from pydantic import BaseModel, Field
 from pydantic.json import pydantic_encoder
 from typing import List,Any
 from datetime import datetime,date
-from aiohttp import ClientSession
 import os, json, shutil, re, csv
 import asyncio
 import openai
 import tiktoken
 from openai import AsyncOpenAI,OpenAI
 import google.generativeai as genai
-from vertexai.generative_models._generative_models import HarmCategory, HarmBlockThreshold, ResponseBlockedError
 
 app = FastAPI(title='GPT Manger API',version='β2.0')
 
@@ -53,16 +51,10 @@ class openai_config:
 class gemini_config:
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-    safety_settings = {
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    }
     # https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini?hl=ja
     config = {
         "max_output_tokens": 2048,
-        "temperature": 0.9,
+        "temperature": 1,
         "top_p": 1
     }
 
