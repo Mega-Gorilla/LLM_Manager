@@ -1,0 +1,291 @@
+{
+    "title": "Example_GPT4",
+    "description": "このプロンプトは問合せテスト用プロンプトです。variablesに「{'qestion':'moon'}」のように入力して問合せてみてください。",
+    "text": {
+        "system": "Describe the {question} in detail."
+    },
+    "setting": {
+        "model": "gpt-4",
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "max_tokens": 256,
+        "presence_penalty": 0.0,
+        "frequency_penalty": 1.0
+    },
+    "variables": {
+        "question": "質問を入力"
+    },
+    "history": [
+        {
+            "id": "chatcmpl-8VgbgFBcfe7YBBdaTKaFMVATLMCoN",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "index": 0,
+                    "message": {
+                        "content": "The Moon is Earth's only natural satellite and the fifth largest moon in the Solar System. It is a relatively small celestial body when compared to Earth, with a diameter of about 3,474 kilometers (2,159 miles), which is roughly one-quarter of Earth's diameter. The average distance from the Moon to Earth is approximately 384,400 kilometers (238,855 miles).\n\n**Surface:**\nThe surface of the Moon features a variety of landscapes, including craters, mountains, valleys, and vast flat areas known as lunar maria (singular: mare). The maria are large, dark basaltic plains formed by ancient volcanic eruptions and are less cratered than the highlands, indicating their relative youth. The most prominent craters, such as Tycho, Copernicus, and Clavius, are easily visible from Earth with the naked eye or a small telescope.\n\nThe Moon's surface is covered with a layer of regolith, a fine, powdery dust created by the constant bombardment of micrometeoroids over billions of years. This regolith can pose challenges for both manned and unmanned missions to the Moon due to its abrasive nature.\n\n**Atmosphere:**\nThe Moon has an extremely thin atmosphere called an exosphere, which",
+                        "role": "assistant",
+                        "function_call": null,
+                        "tool_calls": null
+                    }
+                }
+            ],
+            "created": 1702562640,
+            "model": "gpt-4-1106-preview",
+            "object": "chat.completion",
+            "system_fingerprint": "fp_6aca3b5ce1",
+            "usage": {
+                "completion_tokens": 256,
+                "prompt_tokens": 13,
+                "total_tokens": 269
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8VgeCIiVbSNzD4OXeJtGoGRvzcLum",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "index": 0,
+                    "message": {
+                        "content": "The Moon is Earth's only natural satellite and the fifth largest moon in the Solar System. It is a relatively small celestial body when compared to Earth, with a diameter of about 3,474 kilometers (2,159 miles), which is roughly one-quarter of Earth's diameter. The average distance from the Moon to Earth is approximately 384,400 kilometers (238,855 miles).\n\nSurface:\nThe surface of the Moon features a variety of geological formations, including craters, mountains, valleys, and ancient lava plains known as \"maria\" (singular: \"mare\"), which are large, dark basaltic plains formed by volcanic eruptions that occurred billions of years ago. The most prominent craters, such as Tycho, Copernicus, and Clavius, were created by asteroid impacts and can be seen with the naked eye or through a small telescope.\n\nThe Moon's surface is covered with a layer of fine dust and rocky debris called regolith, which is the result of constant bombardment by micrometeorites over billions of years. The lack of atmosphere means that there is no weathering or erosion, so footprints and tire tracks left by astronauts during the Apollo missions remain virtually unchanged.\n\nOrbit and Rotation:\nThe Moon orbits Earth in an elliptical",
+                        "role": "assistant",
+                        "function_call": null,
+                        "tool_calls": null
+                    }
+                }
+            ],
+            "created": 1702562796,
+            "model": "gpt-4-1106-preview",
+            "object": "chat.completion",
+            "system_fingerprint": "fp_6aca3b5ce1",
+            "usage": {
+                "completion_tokens": 256,
+                "prompt_tokens": 13,
+                "total_tokens": 269
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8VggbBSXQQYiKvnztY2rGKsHRMTlT",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "index": 0,
+                    "message": {
+                        "content": "The Moon is Earth's only natural satellite and the fifth largest moon in the Solar System. It is a relatively small, airless body with a diameter of about 3,474 kilometers (2,159 miles), which is about one-quarter of Earth's diameter. The Moon orbits Earth at an average distance of approximately 384,400 kilometers (238,855 miles).\n\nSurface:\nThe lunar surface is covered with a layer of regolith, a fine rock dust created by the impact of micrometeorites over billions of years. This regolith overlays various types of geological features, including:\n\n1. Maria (singular: Mare): These are large, dark basaltic plains formed by ancient volcanic eruptions. They are less cratered than the highlands and give the Moon its characteristic \"man in the moon\" appearance when viewed from Earth.\n\n2. Highlands: These are lighter-shaded, heavily cratered regions that are elevated above the maria.\n\n3. Craters: The Moon's surface is pockmarked with countless craters of all sizes, created by impacts from meteoroids, asteroids, and comets. Some notable craters include Tycho, Copernicus, and Clavius.\n\n4. Rilles: These are channel-like structures that may have been",
+                        "role": "assistant",
+                        "function_call": null,
+                        "tool_calls": null
+                    }
+                }
+            ],
+            "created": 1702562945,
+            "model": "gpt-4-1106-preview",
+            "object": "chat.completion",
+            "system_fingerprint": "fp_6aca3b5ce1",
+            "usage": {
+                "completion_tokens": 256,
+                "prompt_tokens": 13,
+                "total_tokens": 269
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8VgqdHvQUucQ2ny3W7WVhNd3N2iKC",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "index": 0,
+                    "message": {
+                        "content": "The Moon is Earth's only natural satellite and the fifth largest moon in the Solar System. It is a relatively small celestial body when compared to Earth, with a diameter of about 3,474 kilometers (2,159 miles), which is roughly one-quarter of Earth's diameter. The average distance from the Moon to Earth is approximately 384,400 kilometers (238,855 miles).\n\nSurface:\nThe surface of the Moon features a variety of geological formations, including craters, mountains, valleys, and ancient lava plains known as \"maria\" (singular: \"mare\"), which are large, dark basaltic plains formed by volcanic eruptions that occurred billions of years ago. The most prominent craters, such as Tycho, Copernicus, and Clavius, were created by asteroid impacts and can be seen with the naked eye or through a small telescope.\n\nThe Moon's surface is covered with a layer of fine dust and rocky debris called regolith, which is the result of constant bombardment by micrometeorites over billions of years. The lack of atmosphere means that there is no weathering or erosion, so footprints and tire tracks left by astronauts during the Apollo missions remain virtually unchanged.\n\nAtmosphere:\nThe Moon has an extremely thin exosphere composed",
+                        "role": "assistant",
+                        "function_call": null,
+                        "tool_calls": null
+                    }
+                }
+            ],
+            "created": 1702563567,
+            "model": "gpt-4-1106-preview",
+            "object": "chat.completion",
+            "system_fingerprint": "fp_6aca3b5ce1",
+            "usage": {
+                "completion_tokens": 256,
+                "prompt_tokens": 13,
+                "total_tokens": 269
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8VhSzUBsxiKjP0SXOg5UhncTdzvrZ",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "index": 0,
+                    "message": {
+                        "content": "The moon is the Earth's only natural satellite and is the fifth largest moon in the solar system. It is approximately 238,855 miles away from Earth, which makes it our closest celestial neighbor. The moon has a diameter of about 2,159 miles, which is roughly one-fourth the size of Earth.\n\nThe surface of the moon is covered with a layer of fine dust, known as regolith, created by meteor impacts over billions of years. This surface is pockmarked with a myriad of craters caused by asteroid and meteorite impacts. The moon's terrain is also characterized by large, dark plains called maria (Latin for 'seas'), which were formed by ancient volcanic eruptions, and highlands, which are mountainous regions.\n\nThe moon does not have an atmosphere like Earth, which means it cannot support life as we know it. This lack of atmosphere also means that the temperature on the moon can vary dramatically, from extremely hot during the day to freezing cold at night.\n\nThe moon is tidally locked with Earth, meaning it rotates on its axis at the same rate that it orbits Earth. As a result, we always see the same side of the moon from Earth, known as the near side. The far side, often inaccurately referred",
+                        "role": "assistant",
+                        "function_call": null,
+                        "tool_calls": null
+                    }
+                }
+            ],
+            "created": 1702565945,
+            "model": "gpt-4-0613",
+            "object": "chat.completion",
+            "system_fingerprint": null,
+            "usage": {
+                "completion_tokens": 256,
+                "prompt_tokens": 13,
+                "total_tokens": 269
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8VhTOZNrs3UbnxDT5fTGMMOOpmRRK",
+            "object": "chat.completion.chunk",
+            "created": 1702565970,
+            "model": "gpt-4-0613",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "The moon, also known as Luna, is Earth's only natural satellite and the fifth largest moon in the solar system. It is approximately 238,855 miles away from Earth and has a diameter of about 2,159 miles, which is roughly one-fourth the size of Earth.\n\nThe moon's surface is covered with craters, rocks, mountains, and valleys. The most prominent features are the highlands and the maria. The highlands are older, heavily cratered areas that have bright, rugged terrains. The maria, on the other hand, are dark, relatively smooth plains, formed by ancient volcanic eruptions. \n\nThe moon lacks an atmosphere, which means it doesn't have weather like rain or wind. This lack of atmosphere also results in extreme temperature variations, ranging from extremely hot during the day to freezing at night. \n\nThe moon's gravitational pull causes Earth's tides. It rotates at the same rate that it orbits Earth, a situation known as synchronous rotation, so the same side of the moon (the near side) is always facing Earth. The far side, often inaccurately referred to as the \"dark side,\" remains hidden from our view.\n\nThe moon is the only celestial body beyond Earth where humans have set foot. The first"
+                    },
+                    "finish_reason": "length"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 7,
+                "completion_tokens": 263,
+                "total_tokens": 270
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8VheQLzgI2hLzPu9FnbPeSIFLoul2",
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "index": 0,
+                    "message": {
+                        "content": "The moon is the Earth's only natural satellite and is the fifth largest moon in the solar system. It is approximately 238,855 miles away from Earth and has a diameter of about 2,159 miles, which is roughly one-fourth the size of Earth. \n\nThe moon's surface is covered with craters, rocks, and dust. The craters are formed by meteor impacts and some of them are hundreds of kilometers in diameter. The moon's surface also features large, dark plains known as maria, which were formed by ancient volcanic eruptions. \n\nThe moon does not have an atmosphere like Earth, so it cannot protect itself from solar radiation or meteor impacts. This lack of atmosphere also means that the moon experiences extreme temperature variations, ranging from extremely hot to extremely cold.\n\nThe moon's gravitational pull causes Earth's tides. It rotates at the same rate that it orbits Earth, which is why we always see the same side of the moon from our planet. This phenomenon is known as synchronous rotation.\n\nThe moon is the only celestial body beyond Earth where humans have set foot. The first manned moon landing was on July 20, 1969, by the Apollo 11 mission led by American astronaut Neil Armstrong.\n\nDespite being our closest celestial neighbor, there is",
+                        "role": "assistant",
+                        "function_call": null,
+                        "tool_calls": null
+                    }
+                }
+            ],
+            "created": 1702566654,
+            "model": "gpt-4-0613",
+            "object": "chat.completion",
+            "system_fingerprint": null,
+            "usage": {
+                "completion_tokens": 256,
+                "prompt_tokens": 13,
+                "total_tokens": 269
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        },
+        {
+            "id": "chatcmpl-8Vheu9VMtnzjKyyFTxbjEtKr179RX",
+            "object": "chat.completion.chunk",
+            "created": 1702566684,
+            "model": "gpt-4-0613",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "The moon, also known as Luna in Latin, is Earth's only natural satellite and the fifth largest moon in the solar system. It is located approximately 238,855 miles away from Earth. The moon has a diameter of about 2,159 miles, which is roughly one-fourth the size of Earth.\n\nThe moon's surface is covered with craters, rocks, and dust. The craters are formed by meteor impacts over billions of years. The moon's most prominent features are its highlands and lowlands. The highlands are heavily cratered areas that are bright and rugged, while the lowlands, also known as maria, are relatively smooth and dark. \n\nThe moon does not have an atmosphere, which means it cannot support life as we know it. This lack of atmosphere also means that the surface of the moon experiences extreme temperature variations, ranging from extremely hot during the day to freezing cold at night.\n\nThe moon's gravitational pull causes Earth's tides. It rotates on its axis in sync with its orbit around Earth, a phenomenon known as synchronous rotation. This is why we always see the same side of the moon from Earth, referred to as the near side. The far side, often inaccurately called the \"dark side,\" remains hidden from our"
+                    },
+                    "finish_reason": "length"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 7,
+                "completion_tokens": 261,
+                "total_tokens": 268
+            },
+            "request_id": "Example_GPT4",
+            "ok": true,
+            "variables": {
+                "question": "moon"
+            },
+            "prompt": [
+                {
+                    "system": "Describe the moon in detail."
+                }
+            ]
+        }
+    ],
+    "other": {
+        "translate_text": {
+            "system": "{質問｝を詳しく説明してください。"
+        }
+    }
+}
