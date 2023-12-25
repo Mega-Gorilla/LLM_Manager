@@ -1,0 +1,24 @@
+{
+    "title": "Example_gemini",
+    "description": "このプロンプトは問合せテスト用プロンプトです。variablesに「{'question':'moon'}」のように入力して問合せてみてください。",
+    "text": {
+        "system": "Describe the {question} in detail."
+    },
+    "setting": {
+        "model": "gemini-pro",
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "max_tokens": 500,
+        "presence_penalty": 0.0,
+        "frequency_penalty": 1.0
+    },
+    "variables": {
+        "question": "質問を入力"
+    },
+    "history": [],
+    "other": {
+        "translate_text": {
+            "system": "{質問｝を詳しく説明してください。"
+        }
+    }
+}
