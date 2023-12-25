@@ -9,6 +9,7 @@ import os, json, shutil, re, csv, time
 import asyncio
 import openai
 import tiktoken
+import requests
 from openai import AsyncOpenAI,OpenAI
 import google.generativeai as genai
 
@@ -51,12 +52,6 @@ class openai_config:
 class gemini_config:
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     # https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini?hl=ja
-
-    config = {
-        "max_output_tokens": 2048,
-        "temperature": 1,
-        "top_p": 1
-    }
 
     safety_settings_NONE=[
         { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
@@ -209,18 +204,6 @@ def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_i
             return kwargs
     return{'ok':True,'message':'GPT Request sent in the background'}
 
-@app.get("/openai/get/", tags=["OpenAI"],summary="廃止予定")
-async def openai_get(reset: bool =False):
-    """
-    OpenAI APIの結果を取得します。OpenAI_requestで追加したタスクの結果を取得します。
-
-    **パラメータ:**
-    - reset: 関数を初期化します
-    """
-    return_data=LLM_request.chat_completion_object
-    if reset:
-        LLM_request.chat_completion_object=[]
-    return return_data
 
 @app.get("/openai/get-chunk/", tags=["OpenAI"],summary="廃止予定")
 async def openai_get_stream(reset: bool =False):
@@ -256,6 +239,7 @@ async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,r
                                variables=value.variables)
     kwargs['stream_mode'] = stream_mode
     print(kwargs)
+
     if 'ok' in kwargs.keys():
         if kwargs['ok'] != True:
             return kwargs #プロンプト取得時に問題が発生した場合
@@ -458,6 +442,7 @@ def LLM_request_API(prompt_name,request_id, user_prompts={}, variables={}):
     """
     #jsonデータの検索
     prompt_list = get_prompts_list(prompt_name)
+
     if 'ok' in prompt_list.keys():
         if prompt_list['ok'] != True:
             error("GPT Request Error","Prompt Data Not Found.",{"Prompt_name":prompt_name})
@@ -517,7 +502,27 @@ def gpt_talknizer(texts):
         tokens = tiktoken.get_encoding('gpt2').encode(texts)
         return len(tokens)
 
-async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,tokens_max,top_p,frequency_penalty,presence_penalty,stream_mode,response_format,max_retries,add_responce_dict):
+def gemini_tokenizer(text):
+    api_key = os.getenv("GEMINI_API_KEY")
+    url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:countTokens?key=' + api_key
+    # POSTするデータ
+    data = {
+        "contents": [{
+            "parts": [{
+                "text": text
+            }]
+        }]
+    }
+    # リクエストヘッダ
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    # POSTリクエストの送信
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response_data = json.loads(response.text)
+    return response_data['totalTokens']
+
+async def create_GPT_chat_completion(request_id,Prompt,model,temp,tokens_max,top_p,frequency_penalty,presence_penalty,stream_mode,response_format,max_retries,add_responce_dict):
     process_time=time.time()
     asyclient=openai_config.aclient
     client=openai_config.client
@@ -563,12 +568,7 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
                     result_content += content
                     fin_reason = event_dict['choices'][0]['finish_reason']
                     LLM_request.chat_completion_chank_object.append({"request_id":request_id,
-                                                                        'id':event_dict["id"],
-                                                                        "message": content,
-                                                                        "index": event_dict['choices'][0]['index'],
-                                                                        'object': event_dict['choices'],
-                                                                        'created':event_dict['created'],
-                                                                        'model':event_dict["model"],
+                                                                        "content": content,
                                                                         "finish_reason": fin_reason})
                 prompt_tokens=gpt_talknizer(''.join([item['content'] for item in Prompts]))
                 completion_tokens=gpt_talknizer(result_content)
@@ -628,11 +628,77 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
     # リクエストID 結果を追加
     return {'request_id':request_id,'ok':False,'message':'Request Time out'} #3回問い合わせてレスポンスが返ってこなかった場合
 
+async def create_gemini_chat_completion(request_id,Prompt,model,temp,tokens_max,top_p,frequency_penalty,presence_penalty,stream_mode,response_format,max_retries,add_responce_dict):
+    process_time=time.time()
+    model = genai.GenerativeModel(model_name=model)
+    chat = model.start_chat()
+    prompt_text = Prompt[0]["system"]
+    config = {
+        "max_output_tokens": tokens_max,
+        "temperature": temp,
+        "top_p": top_p
+    }
+    retry_count = 0
+
+    while retry_count < max_retries:
+        try:
+            response = None
+            # Stream
+            if stream_mode:
+                result_content = ""
+                response = chat.send_message(prompt_text,generation_config=config,safety_settings=gemini_config.safety_settings_NONE,stream=True)
+                for chunk in response:
+                    content = chunk.text
+                    fin_reason = chunk.candidates[0].finish_reason.name
+                    print(content,end='')
+                    LLM_request.chat_completion_chank_object.append({"request_id":request_id,
+                                                                        "content": content,
+                                                                        "finish_reason": fin_reason})
+                    result_content += content
+                
+            else:
+                # 通常モード
+                response = chat.send_message(prompt_text,generation_config=config,safety_settings=gemini_config.safety_settings_NONE)
+                result_content = response.text
+                fin_reason = response.candidates[0].finish_reason.name
+                print(result_content)
+
+            prompt_tokens = gemini_tokenizer(prompt_text)
+            completion_tokens = gemini_tokenizer(result_content)
+            chat_completion_resp = {
+                'ok':True,
+                "request_id":request_id,
+                "content": result_content,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens":completion_tokens,
+                "total_tokens":prompt_tokens+completion_tokens
+            }
+            if stream_mode==False:
+                pass
+                #chat_completion_resp.update({"raw_data":response.__dict__})
+            if add_responce_dict != None:
+                chat_completion_resp.update(add_responce_dict)
+            #実行時間を記録
+            LLM_process_time = time.time()-process_time
+            chat_completion_resp.update({"process_time":LLM_process_time})
+            print(f"\n\nGPT Request Time: {LLM_process_time}\nFin Reason: {fin_reason}")
+
+            #応答を配列に追加
+            return chat_completion_resp
+        
+        except Exception as e:
+            #レスポンスエラー時
+            retry_count+=1
+            error(f"{model} Responce Error",e)
+            await asyncio.sleep(3)
+
+    # リクエストID 結果を追加
+    return {'request_id':request_id,'ok':False,'message':'Request Time out'} #3回問い合わせてレスポンスが返ってこなかった場合
+
 async def create_LLM_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
-    #https://github.com/openai/openai-python/blob/main/README.md
     result_data = {}
     if "gpt" in model:
-        responce = await create_GPT_chat_completion(request_id=request_id,prompt_name=prompt_name,Prompt=Prompt,model=model,temp=temp,tokens_max=tokens_max,top_p=top_p,frequency_penalty=frequency_penalty,presence_penalty=presence_penalty,stream_mode=stream_mode,response_format=response_format,max_retries=max_retries,add_responce_dict=add_responce_dict)
+        responce = await create_GPT_chat_completion(request_id=request_id,Prompt=Prompt,model=model,temp=temp,tokens_max=tokens_max,top_p=top_p,frequency_penalty=frequency_penalty,presence_penalty=presence_penalty,stream_mode=stream_mode,response_format=response_format,max_retries=max_retries,add_responce_dict=add_responce_dict)
         result_data.update({"request_id":request_id,
                             "ok":responce['ok'],
                             "model":model,
@@ -641,11 +707,11 @@ async def create_LLM_chat_completion(request_id,prompt_name,response_format={},P
                             "completion_tokens":responce['usage']['completion_tokens'],
                             'prompt_tokens':responce['usage']['prompt_tokens'],
                             'total_tokens':responce['usage']['total_tokens'],
+                            'process_time':responce['process_time'],
                             'raw_data':responce})
     elif "gemini" in model:
-        model = genai.GenerativeModel(model_name=model)
-        chat = model.start_chat()
-
+        responce = await create_gemini_chat_completion(request_id=request_id,Prompt=Prompt,model=model,temp=temp,tokens_max=tokens_max,top_p=top_p,frequency_penalty=frequency_penalty,presence_penalty=presence_penalty,stream_mode=stream_mode,response_format=response_format,max_retries=max_retries,add_responce_dict=add_responce_dict)
+        result_data = responce
     LLM_request.chat_completion_object.append(result_data)
     return 
 
