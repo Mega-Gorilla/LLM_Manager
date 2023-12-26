@@ -178,45 +178,6 @@ def get_cost_day(day: date=Query(default=datetime.now().strftime("%Y-%m-%d"))):
     print(f"{day}: {model_summary}")
     return {"day": str(day), "model_summary": model_summary}
 
-@app.post("/openai/request/", tags=["OpenAI"],summary="廃止予定")
-def OpenAI_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
-    """
-    OpenAI APIにリクエストします。
-    
-    **パラメータ:**
-    - prompt_name: プロンプト名を設定してください。
-    - request_id: レスポンスデータのkeyとして用いられます。設定しなかった場合は、prompt_nameがkeyとなります。
-    - variables_dict: プロンプトに{関数名}で囲まれた関数がある場合、辞書配列を入力することでプロンプト内の{}を設定した文字列に書き換えます。
-        - "user_assistant_prompt": { "user": "こんにちわ!みらい"}
-        - "variables": {"question":"human"}
-    - stream_mode: Stream問合せを実行するかBoolで設定します。Stream時は、"/openai/get-chunk/"にて値を取得できます。
-    """
-    if request_id == None:
-        request_id = prompt_name
-    kwargs = LLM_request_API(prompt_name=prompt_name,
-                               request_id=request_id,
-                               user_prompts= value.user_assistant_prompt,
-                               variables=value.variables)
-    kwargs['stream_mode']=stream_mode
-    background_tasks.add_task(create_LLM_chat_completion,**kwargs)
-    if 'ok' in kwargs.keys():
-        if kwargs['ok'] != True:
-            return kwargs
-    return{'ok':True,'message':'GPT Request sent in the background'}
-
-
-@app.get("/openai/get-chunk/", tags=["OpenAI"],summary="廃止予定")
-async def openai_get_stream(reset: bool =False):
-    """
-    OpenAI APIの結果を取得します。OpenAI_request Stream Trueにて設定した場合に断片を取得できます。
-    **パラメータ:**
-    - reset: 関数を初期化します
-    """
-    return_data=LLM_request.chat_completion_chank_object
-    if reset:
-        LLM_request.chat_completion_chank_object=[]
-    return return_data
-
 @app.post("/LLM/request/",tags=["LLM"],summary="LLMモデルにリクエストを送る")
 async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,request_id: str=None, value: variables_dict = None, stream_mode: bool=False):
     """
@@ -259,6 +220,18 @@ async def LLM_Chat_get(reset: bool =False):
     return_data=LLM_request.chat_completion_object
     if reset:
         LLM_request.chat_completion_object=[]
+    return return_data
+
+@app.get("/LLM/get-chunk/", tags=["LLM"],summary='LLM Stream Chunk内容を取得する')
+async def LLM_get_stream(reset: bool =False):
+    """
+    Stream時のchunk内容を取得します。
+    **パラメータ:**
+    - reset: 関数を初期化します
+    """
+    return_data=LLM_request.chat_completion_chank_object
+    if reset:
+        LLM_request.chat_completion_chank_object=[]
     return return_data
 
 # GPTのクエリをCSVに保存する関数
