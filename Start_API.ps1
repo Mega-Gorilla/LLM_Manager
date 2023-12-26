@@ -2,5 +2,5 @@
 Start-Process "http://127.0.0.1:8000/docs"
 
 # api.py‚ğÀs
+conda activate AI_Tuber
 python .\api.py
-Read-Host -Prompt "Press Enter to exit"
