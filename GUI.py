@@ -5,7 +5,7 @@ import time
 import ast
 import json
 
-LLM_model_name=["gpt-3.5-turbo", "gpt-4","gpt-4-1106-preview"]
+LLM_model_name=["gpt-3.5-turbo", "gpt-4","gpt-4-1106-preview","gemini-pro"]
 BASE_URL = "http://127.0.0.1:8000"
 
 Deepl_API_key = os.getenv("DEEPL_API_KEY")
@@ -51,8 +51,8 @@ def submit_openai(prompt_name,prompt,variables,object):
             "variables": variables
             }
     json_data= json.dumps(json_data, indent=4)
-    response = requests.post(f"{BASE_URL}/openai/request/?prompt_name={prompt_name}&stream_mode=false", json_data)
-
+    response = requests.post(f"{BASE_URL}/LLM/request/?prompt_name={prompt_name}&stream_mode=false", json_data)
+    response = response.json()
     if response['ok']== True:
         success = object.info(f"GPT Request Done.")
         time.sleep(1)
@@ -164,7 +164,7 @@ def display_selected_item_details():
         for history in history_dict:
             expander_title = [f"{key} : {value}" for key, value in history['variables'].items()]
             with st.expander(" / ".join(expander_title)[:100]):
-                st.markdown(f"### Responce\n```\n{history['choices'][0]['message']['content']}\n```")
+                st.markdown(f"### Responce\n```\n{history['content']}\n```")
                 st.markdown(f"### Prompt")
                 for key,value in history['prompt'][0].items():
                     st.markdown(f"**{key}:**")
@@ -176,15 +176,12 @@ def display_selected_item_details():
                 st.markdown(f"""
                             ### Info Data
                             - **Model:** `{history['model']}`
-                            - **ID:** `{history['id']}`
-                            - **Object:** `{history['object']}`
-                            - **Created:** `{history['created']}`
-                            - **Finish Reason:** `{history['choices'][0]['finish_reason']}`
-
+                            - **Finish Reason:** `{history['finish_reason']}`
+                            - **process_time:** `{history['process_time']}`
                             - **Usage:**
-                                - **prompt_tokens:** `{history['usage']['prompt_tokens']}`
-                                - **completion_tokens:** `{history['usage']['completion_tokens']}`
-                                - **total_tokens:** `{history['usage']['total_tokens']}`
+                                - **prompt_tokens:** `{history['prompt_tokens']}`
+                                - **completion_tokens:** `{history['completion_tokens']}`
+                                - **total_tokens:** `{history['total_tokens']}`
                             """)
                 st.markdown("### RAW Data")
                 st.json(history,expanded=False)
