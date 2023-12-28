@@ -210,7 +210,7 @@ async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,r
     return{'ok':True,'message':'LLM Request sent in the background'}
 
 @app.get("/LLM/get/", tags=["LLM"] ,summary='LLMリクエスト結果を取得する')
-async def LLM_Chat_get(reset: bool =False):
+async def LLM_Chat_get(reset: bool =False,del_request_id:str = None):
     """
     LLMの結果を取得します。LLMで追加したタスクの結果を取得します。
 
@@ -220,18 +220,25 @@ async def LLM_Chat_get(reset: bool =False):
     return_data=LLM_request.chat_completion_object
     if reset:
         LLM_request.chat_completion_object=[]
+    if del_request_id != None:
+        return_data = [d for d in return_data if d['request_id'] == del_request_id]
+        LLM_request.chat_completion_chank_object = [d for d in return_data if d['request_id'] != del_request_id]
     return return_data
 
 @app.get("/LLM/get-chunk/", tags=["LLM"],summary='LLM Stream Chunk内容を取得する')
-async def LLM_get_stream(reset: bool =False):
+async def LLM_get_stream(reset_all: bool = False,del_request_id:str = None):
     """
     Stream時のchunk内容を取得します。
     **パラメータ:**
-    - reset: 関数を初期化します
+    - reset_all: 関数を初期化します
+    - del_request_id: 指定されたリクエストidをchunkから消去し、消去した内容を返します。
     """
     return_data=LLM_request.chat_completion_chank_object
-    if reset:
+    if reset_all:
         LLM_request.chat_completion_chank_object=[]
+    if del_request_id != None:
+        return_data = [d for d in return_data if d['request_id'] == del_request_id]
+        LLM_request.chat_completion_chank_object = [d for d in return_data if d['request_id'] != del_request_id]
     return return_data
 
 # GPTのクエリをCSVに保存する関数
