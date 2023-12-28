@@ -315,6 +315,7 @@ def get_prompts_list(search_query=None):
             return {"ok":False,"message":"Prompt Data Not Found."}
     else:
         for json_file in json_file_list:
+            print(f"open:{json_file}")
             with open(f"data/{json_file}", 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 result.append(data)
