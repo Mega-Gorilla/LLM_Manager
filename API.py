@@ -10,10 +10,20 @@ import asyncio
 import openai
 import tiktoken
 import requests
+import logging
 from openai import AsyncOpenAI,OpenAI
 import google.generativeai as genai
 
 app = FastAPI(title='GPT Manger API',version='β2.0')
+
+#Fast API ロギング設定
+class FilterSpecificRequest(logging.Filter):
+    def filter(self, record):
+        # 特定のリクエストパターンをチェック
+        return "/LLM/get-chunk/" not in record.getMessage()
+
+logger = logging.getLogger("uvicorn.access")
+logger.addFilter(FilterSpecificRequest())
 
 class config:
     prompts_folder_path = "data"
@@ -151,6 +161,7 @@ def get_prompt_data_by_name(prompt_name: str):
 @app.get("/prompts-get/history/", tags=["Prompts"])
 def get_history(prompt_name: str):
     result = get_history(prompt_name)
+    print("History:")
     print(result)
     return result
 
@@ -199,7 +210,6 @@ async def LLM_Chat_request(background_tasks: BackgroundTasks, prompt_name: str,r
                                user_prompts= value.user_assistant_prompt,
                                variables=value.variables)
     kwargs['stream_mode'] = stream_mode
-    print(kwargs)
 
     if 'ok' in kwargs.keys():
         if kwargs['ok'] != True:
@@ -551,6 +561,7 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
                     LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": content,
                                                                         "finish_reason": fin_reason})
+                    await asyncio.sleep(0)
                 #終了キーをPost
                 LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": "",
@@ -559,6 +570,7 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
                 prompt_tokens=gpt_talknizer(''.join([item['content'] for item in Prompts]))
                 completion_tokens=gpt_talknizer(result_content)
                 total_tokens = prompt_tokens+completion_tokens
+                response="In Stream mode, raw_data cannot be retrieved."
                 
             else:
                 # 通常モード
@@ -585,8 +597,10 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
                 "completion_tokens":completion_tokens,
                 "prompt_tokens":prompt_tokens,
                 'total_tokens':total_tokens,
-                'raw_data':response
+                'stream':stream_mode
             }
+            if stream_mode == False:
+                chat_completion_resp.update({'raw_data':response})
             #追加の辞書配列を入れる
             if add_responce_dict != None:
                 chat_completion_resp.update(add_responce_dict)
@@ -646,6 +660,7 @@ async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp
                                                                         "content": content,
                                                                         "finish_reason": fin_reason})
                     result_content += content
+                    await asyncio.sleep(0)
                 #終了キーをPost
                 LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": "",
@@ -670,6 +685,7 @@ async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp
                 "completion_tokens":completion_tokens,
                 "prompt_tokens":prompt_tokens,
                 'total_tokens':completion_tokens+prompt_tokens,
+                'stream':stream_mode
             }
             if stream_mode==False:
                 pass
