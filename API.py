@@ -232,7 +232,8 @@ async def LLM_Chat_get(reset: bool =False,del_request_id:str = None):
         LLM_request.chat_completion_object=[]
     if del_request_id != None:
         return_data = [d for d in return_data if d['request_id'] == del_request_id]
-        LLM_request.chat_completion_chank_object = [d for d in return_data if d['request_id'] != del_request_id]
+        LLM_request.chat_completion_object = [d for d in return_data if d['request_id'] != del_request_id]
+    await asyncio.sleep(0)
     return return_data
 
 @app.get("/LLM/get-chunk/", tags=["LLM"],summary='LLM Stream Chunk内容を取得する')
@@ -558,19 +559,24 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
                     print(content,end='')
                     result_content += content
                     fin_reason = event_dict['choices'][0]['finish_reason']
+                    index_num = event_dict['choices'][0]['index']
                     LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": content,
-                                                                        "finish_reason": fin_reason})
+                                                                        "index":index_num,
+                                                                        "finish_reason": fin_reason,
+                                                                        "finish": False})
                     await asyncio.sleep(0)
                 #終了キーをPost
                 LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": "",
-                                                                        "finish_reason": "Done"})
+                                                                        "finish_reason": fin_reason,
+                                                                        "finish": True})
                 #トークン計算
                 prompt_tokens=gpt_talknizer(''.join([item['content'] for item in Prompts]))
                 completion_tokens=gpt_talknizer(result_content)
                 total_tokens = prompt_tokens+completion_tokens
                 response="In Stream mode, raw_data cannot be retrieved."
+                await asyncio.sleep(0)
                 
             else:
                 # 通常モード
@@ -585,6 +591,7 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
                 total_tokens=response['usage']['total_tokens']
                 
                 print(response['choices'][0]['message']['content'])
+                await asyncio.sleep(0)
             
             # 辞書配列に結果を格納
             chat_completion_resp = {
@@ -658,13 +665,15 @@ async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp
                     print(content,end='')
                     LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": content,
-                                                                        "finish_reason": fin_reason})
+                                                                        "finish_reason": fin_reason,
+                                                                        "finish": False})
                     result_content += content
                     await asyncio.sleep(0)
                 #終了キーをPost
                 LLM_request.chat_completion_chank_object.append({"request_id":request_id,
                                                                         "content": "",
-                                                                        "finish_reason": "Done"})
+                                                                        "finish_reason": fin_reason,
+                                                                        "finish": True})
                 
             else:
                 # 通常モード
@@ -672,6 +681,7 @@ async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp
                 result_content = response.text
                 fin_reason = response.candidates[0].finish_reason.name
                 print(result_content)
+                await asyncio.sleep(0)
 
             prompt_tokens = gemini_tokenizer(prompt_text)
             completion_tokens = gemini_tokenizer(result_content)
