@@ -641,8 +641,8 @@ async def create_GPT_chat_completion(request_id,prompt_name,Prompt,model,temp,to
     # リクエストID 結果を追加
     return {'request_id':request_id,'ok':False,'message':'Request Time out'} #3回問い合わせてレスポンスが返ってこなかった場合
 
-async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp,tokens_max,top_p,frequency_penalty,presence_penalty,stream_mode,response_format,max_retries,add_responce_dict):
-    process_time=time.time()
+async def create_gemini_chat_completion(request_id, prompt_name, Prompt, model, temp, tokens_max, top_p, frequency_penalty, presence_penalty, stream_mode, response_format, max_retries, add_responce_dict):
+    process_time = time.time()
     gemini_name = model
     model = genai.GenerativeModel(model_name=model)
     chat = model.start_chat()
@@ -657,29 +657,41 @@ async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp
     while retry_count < max_retries:
         try:
             response = None
-            # Stream
+            # Streamモードの場合
             if stream_mode:
                 result_content = ""
-                response = chat.send_message(prompt_text,generation_config=config,safety_settings=gemini_config.safety_settings_NONE,stream=True)
+                response = chat.send_message(
+                    prompt_text,
+                    generation_config=config,
+                    safety_settings=gemini_config.safety_settings_NONE,
+                    stream=True
+                )
                 for chunk in response:
                     content = chunk.text
                     fin_reason = chunk.candidates[0].finish_reason.name
-                    print(content,end='')
-                    LLM_request.chat_completion_chank_object.append({"request_id":request_id,
-                                                                        "content": content,
-                                                                        "finish_reason": fin_reason,
-                                                                        "finish": False})
+                    print(content, end='')
+                    LLM_request.chat_completion_chank_object.append({
+                        "request_id": request_id,
+                        "content": content,
+                        "finish_reason": fin_reason,
+                        "finish": False
+                    })
                     result_content += content
                     await asyncio.sleep(0)
-                #終了キーをPost
-                LLM_request.chat_completion_chank_object.append({"request_id":request_id,
-                                                                        "content": "",
-                                                                        "finish_reason": fin_reason,
-                                                                        "finish": True})
-                
+                # 終了キーをPost
+                LLM_request.chat_completion_chank_object.append({
+                    "request_id": request_id,
+                    "content": "",
+                    "finish_reason": fin_reason,
+                    "finish": True
+                })
             else:
-                # 通常モード
-                response = chat.send_message(prompt_text,generation_config=config,safety_settings=gemini_config.safety_settings_NONE)
+                # 通常モードの場合
+                response = chat.send_message(
+                    prompt_text,
+                    generation_config=config,
+                    safety_settings=gemini_config.safety_settings_NONE
+                )
                 result_content = response.text
                 fin_reason = response.candidates[0].finish_reason.name
                 print(result_content)
@@ -688,40 +700,38 @@ async def create_gemini_chat_completion(request_id,prompt_name,Prompt,model,temp
             prompt_tokens = gemini_tokenizer(prompt_text)
             completion_tokens = gemini_tokenizer(result_content)
             chat_completion_resp = {
-                "request_id":request_id,
-                "ok":True,
-                "model":gemini_name,
+                "request_id": request_id,
+                "ok": True,
+                "model": gemini_name,
                 "content": result_content,
                 "prompt": Prompt,
-                "finish_reason":fin_reason,
-                "completion_tokens":completion_tokens,
-                "prompt_tokens":prompt_tokens,
-                'total_tokens':completion_tokens+prompt_tokens,
-                'stream':stream_mode
+                "finish_reason": fin_reason,
+                "completion_tokens": completion_tokens,
+                "prompt_tokens": prompt_tokens,
+                "total_tokens": completion_tokens + prompt_tokens,
+                "stream": stream_mode
             }
-            if stream_mode==False:
-                pass
-                #chat_completion_resp.update({"raw_data":response.__dict__})
-            if add_responce_dict != None:
+            if add_responce_dict is not None:
                 chat_completion_resp.update(add_responce_dict)
-            #実行時間を記録
-            LLM_process_time = time.time()-process_time
-            chat_completion_resp.update({"process_time":LLM_process_time})
+            # 実行時間を記録
+            LLM_process_time = time.time() - process_time
+            chat_completion_resp.update({"process_time": LLM_process_time})
             print(f"\n\nGemini Request Time: {LLM_process_time}\nFin Reason: {fin_reason}")
 
-            #Logを記録
-            Create_or_add_json_data(prompt_name,history=chat_completion_resp)
-            #応答を配列に追加
+            # ログに記録
+            Create_or_add_json_data(prompt_name, history=chat_completion_resp)
+            # 応答を配列に追加して返却
             return chat_completion_resp
-        
+
         except Exception as e:
-            #レスポンスエラー時
-            retry_count+=1
-            error(f"{gemini_name} Responce Error",e)
+            retry_count += 1
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
+            detailed_error_message = f"使用されているGemini APIキー: {gemini_api_key}\n発生した例外: {e}"
+            error(f"{gemini_name} Responce Error", detailed_error_message)
             await asyncio.sleep(3)
 
-    # リクエストID 結果を追加
-    return {'request_id':request_id,'ok':False,'message':'Request Time out'} #3回問い合わせてレスポンスが返ってこなかった場合
+    # 最大リトライ回数を超えた場合
+    return {'request_id': request_id, 'ok': False, 'message': 'Request Time out'}
 
 async def create_LLM_chat_completion(request_id,prompt_name,response_format={},Prompt=[{"system":"You are a helpful assistant."},{"user":"Hello!"}],model="gpt-4",temp=0,tokens_max=2000,top_p=1,frequency_penalty=0,presence_penalty=0,max_retries=3,add_responce_dict=None,stream_mode=False):
     result_data = {}
