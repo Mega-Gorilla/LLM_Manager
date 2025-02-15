@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import sys
+import subprocess
 import requests
 import time
 import ast
@@ -94,8 +96,10 @@ def show_sidebar_buttons(data):
     st.sidebar.markdown("Select Prompt:")
     apply_css()
     for item in data:
-        button_label = f"**{item['title']}**"
-        if st.sidebar.button(button_label, key=item['title'],use_container_width=True):
+        # キー 'title' が存在しない場合はデフォルト値を設定する
+        title = item.get("title", "No Title")
+        button_label = f"**{title}**"
+        if st.sidebar.button(button_label, key=title,use_container_width=True):
             st.session_state.selected_item = item
 
 def display_selected_item_details():
@@ -213,11 +217,22 @@ def display_prompt_text(text_dict):
     text_box_value_dict = {}
 
     for key, value in text_dict.items():
-        text_box_value = st.text_area(label=key, value=value,height=value.count('\n')*35)
+        height_value = max(value.count('\n') * 35, 68)  # 最低68ピクセルを保証
+        text_box_value = st.text_area(label=key, value=value, height=height_value)
         text_box_value_dict[key] = text_box_value
     return text_box_value_dict
 
 if __name__ == "__main__":
+    # すでに自動再起動済みか（フラグがあるか）と、
+    # Streamlit実行時にセットされる環境変数 STREAMLIT_SERVER_PORT の有無で判定
+    if os.getenv("STREAMLIT_AUTO_RUN") is None and os.getenv("STREAMLIT_SERVER_PORT") is None:
+        print("このアプリは 'streamlit run' で実行する必要があります。自動的に再起動します...")
+        # 環境変数にフラグをセットして再実行する
+        new_env = os.environ.copy()
+        new_env["STREAMLIT_AUTO_RUN"] = "true"
+        subprocess.run(["streamlit", "run", sys.argv[0]] + sys.argv[1:], env=new_env)
+        sys.exit()
+    
     # 初期化
     if "selected_item" not in st.session_state:
         st.session_state.selected_item = None
