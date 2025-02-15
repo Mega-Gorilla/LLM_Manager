@@ -7,7 +7,8 @@ import time
 import ast
 import json
 
-LLM_model_name=["gpt-3.5-turbo", "gpt-4","gpt-4-1106-preview","gemini-pro"]
+LLM_model_name=["gpt-4-1106-preview","gpt-3.5-turbo", "gpt-4","gpt-4o","chatgpt-4o-latest","gpt-4o-mini","o1-mini","o3-mini",
+                "gemini-pro","gemini-1.5-flash","gemini-1.5-pro","gemini-2.0-flash","gemini-2.0-flash-lite-preview-02-05"]
 BASE_URL = "http://127.0.0.1:8000"
 
 Deepl_API_key = os.getenv("DEEPL_API_KEY")
