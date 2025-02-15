@@ -26,7 +26,8 @@ logger = logging.getLogger("uvicorn.access")
 logger.addFilter(FilterSpecificRequest())
 
 class config:
-    prompts_folder_path = "data"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    prompts_folder_path = os.path.join(BASE_DIR, "data")
     
 class LLM_request:
     chat_completion_object:List[Any]=[]
@@ -298,7 +299,7 @@ def get_file_list():
     - json_files: JSONファイルのリスト
     """
 
-    all_files = os.listdir("data")
+    all_files = os.listdir(config.prompts_folder_path)
     json_files = [f for f in all_files if f.endswith('.json')]
     
         
@@ -318,16 +319,17 @@ def get_prompts_list(search_query=None):
     
     json_file_list = get_file_list()
     result = []
-    if search_query!=None:
-        if f"{search_query}.json" in json_file_list:
-            with open(f"data/{search_query}.json", 'r', encoding='utf-8') as f:
+    if search_query is not None:
+        filename = f"{search_query}.json"
+        if filename in json_file_list:
+            with open(os.path.join(config.prompts_folder_path, filename), 'r', encoding='utf-8') as f:
                 return json.load(f)
         else:
-            return {"ok":False,"message":"Prompt Data Not Found."}
+            return {"ok": False, "message": "Prompt Data Not Found."}
     else:
         for json_file in json_file_list:
             print(f"open:{json_file}")
-            with open(f"data/{json_file}", 'r', encoding='utf-8') as f:
+            with open(os.path.join(config.prompts_folder_path, json_file), 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 result.append(data)
     return result
@@ -824,4 +826,4 @@ def GPT_error_list():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("API:app", host="0.0.0.0", port=8000,reload=True)
+    uvicorn.run("API:app", host="0.0.0.0", port=8000,reload=False)
